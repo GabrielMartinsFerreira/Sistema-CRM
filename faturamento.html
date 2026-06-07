@@ -1,0 +1,2011 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faturamento — GG TECH CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e16;--bg-card:#13151f;--bg-card2:#191c28;--bg-input:#1e2132;
+  --border:#252840;--border-hover:#363a5a;--text:#dde1f0;--text-muted:#5c6080;--text-dim:#8890b0;
+  --accent:#5b6ef5;--accent-glow:rgba(91,110,245,0.18);
+  --green:#22d48f;--green-dim:rgba(34,212,143,0.12);
+  --yellow:#f5c542;--yellow-dim:rgba(245,197,66,0.12);
+  --red:#f0516a;--red-dim:rgba(240,81,106,0.12);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.12);
+  --radius:14px;--radius-sm:8px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px;max-width:1280px;margin:0 auto}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.logo-wrap{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--accent-glow);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(91,110,245,0.35)}
+.logo-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.logo-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-nav{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-nav-accent{background:linear-gradient(135deg,var(--accent),#7b4ff5);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(91,110,245,0.3)}
+.btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(91,110,245,0.45)}
+
+/* OVERLAY */
+#overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s}
+.kpi-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px 0 0 2px}
+.kc-bruto::before{background:var(--accent)}
+.kc-lucro::before{background:var(--green)}
+.kc-margem::before{background:var(--yellow)}
+.kc-alerta::before{background:var(--red)}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.kpi-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-0.8px}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* TABLE */
+.section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.fat-table{width:100%;border-collapse:collapse;font-size:13px}
+.fat-table th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:0 10px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.fat-table td{padding:12px 10px;border-bottom:1px solid rgba(37,40,64,.6);vertical-align:middle}
+.fat-table tr:last-child td{border-bottom:none}
+.fat-table tr:hover td{background:var(--bg-card2)}
+.badge-os{display:inline-block;font-size:9px;font-weight:700;color:var(--green);background:var(--green-dim);border:1px solid rgba(34,212,143,0.3);border-radius:4px;padding:1px 5px;margin-right:3px;letter-spacing:.4px}
+.badge-sem-os{font-size:10px;color:var(--text-muted)}
+.margem-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;font-family:'DM Mono',monospace}
+.mp-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,0.3)}
+.mp-warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,0.3)}
+.mp-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,0.3)}
+.mp-none{background:var(--bg-card2);color:var(--text-muted);border:1px solid var(--border)}
+.btn-detalhe{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--accent-glow);border:1px solid rgba(91,110,245,0.35);border-radius:var(--radius-sm);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-detalhe:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-lupa{display:inline-flex;align-items:center;padding:4px 7px;background:var(--blue-dim);border:1px solid rgba(56,189,248,0.3);border-radius:var(--radius-sm);color:var(--blue);font-size:12px;cursor:pointer;transition:all .15s;margin-left:5px}
+.btn-lupa:hover{background:var(--blue);color:#0c0e16;border-color:var(--blue)}
+.empty-msg{text-align:center;color:var(--text-muted);padding:32px;font-size:14px}
+
+/* PREVISÃO PANEL */
+.prev-search{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.prev-search .form-control{flex:1;min-width:200px}
+.btn-buscar{padding:9px 18px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-buscar:hover{background:#4a5de0}
+.prev-result{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;display:none}
+.prev-result.show{display:block}
+.prev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:12px}
+.prev-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.prev-item-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.prev-item-value{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
+.prev-delta{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:6px}
+.prev-ok{background:var(--green-dim);color:var(--green)}
+.prev-over{background:var(--red-dim);color:var(--red)}
+.prev-under{background:var(--yellow-dim);color:var(--yellow)}
+
+/* MODAL BASE */
+.modal-overlay{position:fixed;inset:0;background:rgba(8,9,16,.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:94%;max-width:600px;max-height:92vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.modal-title::before{content:'';display:block;width:3px;height:18px;background:var(--green);border-radius:2px}
+.btn-modal-close{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;transition:color .15s}
+.btn-modal-close:hover{color:var(--text)}
+.modal-lead-info{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px}
+.mli-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px}
+.mli-row:last-child{margin-bottom:0}
+.mli-label{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.mli-value{font-weight:600}
+.mli-bruto{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.form-control{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
+.form-control:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* COST SECTION DIVIDERS */
+.cost-section{margin:16px 0 10px;padding:6px 0;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px}
+.cost-section span{background:var(--bg-card2);padding:3px 8px;border-radius:4px;border:1px solid var(--border)}
+
+/* CALC BOX */
+.calc-box{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin:18px 0 0}
+.calc-line{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(37,40,64,.5)}
+.calc-line:last-child{border-bottom:none}
+.calc-label{color:var(--text-muted)}
+.calc-value{font-family:'DM Mono',monospace;font-weight:600}
+.calc-lucro{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
+.calc-margem{font-size:15px;font-weight:700;font-family:'DM Mono',monospace}
+.alerta-prejuizo{display:none;background:var(--red-dim);border:1px solid rgba(240,81,106,0.4);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:12px;color:var(--red);font-weight:600}
+.alerta-prejuizo.show{display:flex;align-items:center;gap:8px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.btn{padding:9px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-cancel-modal{background:var(--bg-card2);border:1px solid var(--border);color:var(--text-dim)}
+.btn-cancel-modal:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-save{background:var(--green);color:#0c0e16}
+.btn-save:hover{filter:brightness(1.1)}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+
+/* AUDIT MODAL */
+.audit-modal{max-width:680px}
+.audit-modal .modal-title::before{background:var(--blue)}
+.audit-header-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.audit-kpi{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;text-align:center}
+.audit-kpi-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.audit-kpi-value{font-size:17px;font-weight:700;font-family:'DM Mono',monospace}
+.audit-chart-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.audit-chart-box{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.audit-chart-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.audit-deducoes{margin-top:16px}
+.audit-ded-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(37,40,64,.5);font-size:13px}
+.audit-ded-row:last-child{border-bottom:none}
+.audit-ded-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px}
+.audit-ded-label{display:flex;align-items:center;color:var(--text-dim)}
+.audit-ded-value{font-family:'DM Mono',monospace;font-weight:600}
+.audit-result-box{background:var(--bg-card2);border:2px solid var(--green);border-radius:var(--radius-sm);padding:14px 18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center}
+.audit-result-box.danger{border-color:var(--red)}
+.audit-result-box.warn{border-color:var(--yellow)}
+.audit-lucro-label{font-size:13px;font-weight:600;color:var(--text-dim)}
+.audit-lucro-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace}
+.audit-margem-badge{font-size:14px;font-weight:700;font-family:'DM Mono',monospace;padding:6px 14px;border-radius:20px}
+.amb-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,0.3)}
+.amb-warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,0.3)}
+.amb-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,0.3)}
+.prev-vs-real{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px}
+.pvr-title{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.pvr-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.nav-mes{display:flex;align-items:center;justify-content:center;gap:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 20px;margin-bottom:20px}
+.nav-mes-btn{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px;transition:all .15s;font-family:'DM Sans',sans-serif}
+.nav-mes-btn:hover{border-color:var(--border-hover);color:var(--text);background:var(--bg-card)}
+.nav-mes-label{font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);min-width:170px;text-align:center;letter-spacing:-.3px}
+
+/* BOTÃO FICHA DE OS */
+.btn-ficha{display:inline-flex;align-items:center;padding:4px 8px;background:var(--purple-dim);border:1px solid rgba(167,139,250,0.3);border-radius:var(--radius-sm);color:var(--purple);font-size:12px;cursor:pointer;transition:all .15s;margin-left:5px}
+.btn-ficha:hover{background:var(--purple);color:#13151f;border-color:var(--purple)}
+
+/* OS CARD MODAL */
+.os-card-modal{max-width:720px}
+.os-card-modal .modal-title::before{background:var(--purple)}
+.oc-section{margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px}
+.oc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.oc-item{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.oc-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.oc-value{font-size:13px;font-weight:600;word-break:break-word}
+.oc-full{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px}
+.oc-fin-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(37,40,64,.5);font-size:13px}
+.oc-fin-line:last-child{border-bottom:none}
+
+/* PRINT — esconde tudo exceto ficha de OS */
+@media print {
+  body > *:not(#os-print-area){display:none!important}
+  #os-print-area{display:block!important;padding:0;margin:0}
+  @page{size:A4;margin:18mm 14mm}
+  .os-print-header{display:flex!important;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:18px}
+  .os-print-title{font-size:20px;font-weight:700;color:#111}
+  .os-print-sub{font-size:12px;color:#666;margin-top:4px}
+}
+#os-print-area{display:none}
+
+/* ── VIEW TABS ── */
+.view-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.view-tab{padding:11px 24px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:7px;margin-bottom:-1px}
+.view-tab:hover{color:var(--text)}
+.view-tab.active{color:var(--text)}
+#tab-obras.active{border-bottom-color:var(--green);color:var(--green)}
+#tab-gastos.active{border-bottom-color:var(--orange);color:var(--orange)}
+#tab-variaveis.active{border-bottom-color:var(--accent);color:var(--accent)}
+.gv-form-row{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr 95px 78px auto;gap:10px;align-items:end}
+@media(max-width:1000px){.gv-form-row{grid-template-columns:1fr 1fr;}}
+.gv-indice-card{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:16px}
+.gv-indice-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:800;color:var(--accent);line-height:1}
+.gv-vinc-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--accent-glow,rgba(91,110,245,.12));color:var(--accent);border:1px solid rgba(91,110,245,.3)}
+.gv-vinc-geral{background:var(--bg-card2);color:var(--text-dim);border:1px solid var(--border)}
+
+/* ── GASTOS FIXOS ── */
+.gf-form-row{display:grid;grid-template-columns:1fr 1.2fr 100px 78px 140px auto auto;gap:10px;align-items:end}
+@media(max-width:1000px){.gf-form-row{grid-template-columns:1fr 1fr;}}
+.gf-table{width:100%;border-collapse:collapse;font-size:13px}
+.gf-table th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:0 10px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.gf-table td{padding:9px 10px;border-bottom:1px solid rgba(37,40,64,.5);vertical-align:middle}
+.gf-table tr:last-child td{border-bottom:none}
+.gf-table tr:hover td{background:var(--bg-card2)}
+.gf-cat-row td{padding:7px 10px;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;background:var(--bg-card2);border-bottom:1px solid var(--border)}
+.gf-total-row td{padding:5px 10px;font-size:11px;color:var(--text-dim);background:rgba(37,40,64,.25);font-style:italic}
+.bc-infra{color:var(--blue);background:var(--blue-dim);border:1px solid rgba(56,189,248,0.3);display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+.bc-pessoal{color:var(--purple);background:var(--purple-dim);border:1px solid rgba(167,139,250,0.3);display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+.bc-servicos{color:var(--yellow);background:var(--yellow-dim);border:1px solid rgba(245,197,66,0.3);display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+.bc-marketing{color:var(--orange);background:var(--orange-dim);border:1px solid rgba(251,146,60,0.3);display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+.btn-gf-del{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 9px;border-radius:4px;font-size:14px;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-gf-del:hover{color:var(--red);background:var(--red-dim)}
+.gf-fixar-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,0.3)}
+/* ── Status de pagamento (Contas a Pagar) ── */
+.gf-row-pago td{opacity:.5}
+.gf-status-btn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;border:1px solid transparent;font-family:'DM Sans',sans-serif}
+.gf-status-btn.pendente{background:var(--bg-card2);color:var(--text-dim);border-color:var(--border)}
+.gf-status-btn.pendente:hover{color:var(--green);border-color:rgba(34,212,143,.4)}
+.gf-status-btn.pago{background:var(--green-dim);color:var(--green);border-color:rgba(34,212,143,.35)}
+.gf-status-btn.pago:hover{filter:brightness(1.15)}
+.gf-venc-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text-dim)}
+.gf-venc-badge.vencido{color:var(--red);font-weight:700}
+.gf-venc-badge.hoje{color:var(--yellow);font-weight:700}
+/* Badge de status + select inline */
+.gf-status-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.gf-status-badge.s-pago{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,.3)}
+.gf-status-badge.s-atrasado{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)}
+.gf-status-badge.s-agendado{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.gf-status-badge.s-pendente{background:var(--bg-card2);color:var(--text-dim);border:1px solid var(--border)}
+.gf-status-sel{font-size:11px;font-weight:600;padding:4px 6px;border-radius:6px;background:var(--bg-card2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'DM Sans',sans-serif}
+.gf-clip{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px;text-decoration:none;display:inline-block}
+.gf-clip.has{color:var(--accent)}.gf-clip.empty{opacity:.3}
+.gf-conta-tag{font-size:10px;color:var(--text-dim);font-weight:600}
+
+/* ── DRE OFICIAL (matriz comparativa) ── */
+.dre-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.dre-table{border-collapse:collapse;font-size:12px;min-width:100%;white-space:nowrap}
+.dre-table th,.dre-table td{padding:8px 12px;text-align:right;border-bottom:1px solid rgba(37,40,64,.5)}
+.dre-table thead th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;background:var(--bg-card2);position:sticky;top:0}
+.dre-table th.dre-lbl,.dre-table td.dre-lbl{text-align:left;position:sticky;left:0;background:var(--bg-card);font-weight:600;min-width:230px;z-index:1}
+.dre-table thead th.dre-lbl{background:var(--bg-card2);z-index:2}
+.dre-table td.dre-acc{background:var(--accent-glow,rgba(91,110,245,.08));font-weight:700;border-left:2px solid var(--border)}
+.dre-table th.dre-acc{background:var(--bg-card2);border-left:2px solid var(--border)}
+.dre-val{font-family:'DM Mono',monospace}
+.dre-pct{font-size:9px;color:var(--text-muted);display:block;margin-top:1px}
+.dre-row-result td{font-weight:700}
+.dre-row-result td.dre-lbl{color:var(--text)}
+.dre-row-sub td.dre-lbl{padding-left:24px;color:var(--text-dim);font-weight:500}
+.dre-row-final td{background:rgba(34,212,143,.06);font-weight:800;border-top:2px solid var(--border);border-bottom:2px solid var(--border)}
+
+/* ── HEALTH DASHBOARD ── */
+.health-card{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:var(--radius);padding:22px 24px;margin-bottom:20px}
+.health-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.health-lines{display:grid;gap:5px;margin-bottom:10px}
+.health-line{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600}
+.hl-bruto{background:rgba(91,110,245,0.08);border:1px solid rgba(91,110,245,0.15)}
+.hl-custos{background:var(--red-dim);border:1px solid rgba(240,81,106,0.15)}
+.hl-margem{background:var(--blue-dim);border:1px solid rgba(56,189,248,0.12)}
+.hl-fixos{background:var(--orange-dim);border:1px solid rgba(251,146,60,0.15)}
+.health-label{color:var(--text-dim)}
+.health-hval{font-family:'DM Mono',monospace;font-weight:700}
+.health-result{display:flex;justify-content:space-between;align-items:center;background:var(--bg-card2);border:2px solid var(--green);border-radius:var(--radius-sm);padding:16px 20px}
+.health-result.warn{border-color:var(--yellow)}
+.health-result.danger{border-color:var(--red)}
+.health-lucro-value{font-size:26px;font-weight:700;font-family:'DM Mono',monospace}
+.health-alert{display:none;align-items:center;gap:8px;background:var(--yellow-dim);border:1px solid rgba(245,197,66,0.4);border-radius:var(--radius-sm);padding:10px 14px;margin-top:10px;font-size:12px;color:var(--yellow);font-weight:600}
+.health-alert.show{display:flex}
+
+/* ── PRINT VISIBILITY TOGGLES ── */
+.print-toggle-panel{display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex:1}
+.print-toggle-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-right:4px}
+.print-toggle-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.print-toggle-btn:hover{border-color:var(--orange);color:var(--orange)}
+.print-toggle-btn.active{background:var(--red-dim);border-color:rgba(240,81,106,.5);color:var(--red)}
+.print-hide{display:none!important}
+@media print{.print-hide{display:none!important}}
+
+/* PARCELAS E ANEXO NA FICHA OS */
+.oc-pag-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.oc-pag-table th{padding:6px 10px;background:var(--bg-card2);border:1px solid var(--border);font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-size:10px;text-align:left}
+.oc-pag-table td{padding:8px 10px;border:1px solid var(--border);color:var(--text)}
+.oc-pag-table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+.oc-anexo-block{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg-card2);border-radius:9px;border:1px solid rgba(34,212,143,.3);margin-top:8px}
+.oc-anexo-icon{font-size:26px;flex-shrink:0}
+.oc-anexo-info{flex:1}
+.oc-anexo-name{font-size:13px;font-weight:700;color:var(--text)}
+.oc-anexo-size{font-size:11px;color:var(--text-muted);margin-top:2px}
+.btn-open-anexo{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div id="overlay"><div class="spinner"></div></div>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">💰</div>
+    <div>
+      <div class="logo-title">Faturamento</div>
+      <div class="logo-sub">Análise de custos, comissões e margem real por pedido</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <a href="index.html" class="btn-nav">← Voltar ao CRM</a>
+    <a href="relatorios.html" class="btn-nav btn-nav-accent">📈 Relatórios</a>
+  </div>
+</header>
+
+<!-- NAVEGAÇÃO TEMPORAL -->
+<div class="nav-mes">
+  <button class="nav-mes-btn" onclick="mesAnterior()">◀ Anterior</button>
+  <span class="nav-mes-label" id="nav-mes-label">—</span>
+  <button class="nav-mes-btn" onclick="proximoMes()">Próximo ▶</button>
+</div>
+
+<!-- VIEW TABS -->
+<div class="view-tabs">
+  <button class="view-tab active" id="tab-obras" onclick="setView('obras')">📊 Visão Obras</button>
+  <button class="view-tab" id="tab-gastos" onclick="setView('gastos')">🏢 Gastos Fixos</button>
+  <button class="view-tab" id="tab-variaveis" onclick="setView('variaveis')">📉 Gastos Variáveis</button>
+</div>
+
+<div id="view-obras">
+<!-- KPI CARDS -->
+<div class="kpi-row">
+  <div class="kpi-card kc-bruto">
+    <div class="kpi-label">Faturamento Bruto</div>
+    <div class="kpi-value" id="k-bruto">—</div>
+    <div class="kpi-sub" id="k-bruto-sub">total de pedidos</div>
+  </div>
+  <div class="kpi-card kc-lucro">
+    <div class="kpi-label">Lucro Líquido Calculado</div>
+    <div class="kpi-value" id="k-lucro" style="color:var(--green)">—</div>
+    <div class="kpi-sub" id="k-lucro-sub">pedidos com custo lançado</div>
+  </div>
+  <div class="kpi-card kc-margem">
+    <div class="kpi-label">Margem Média</div>
+    <div class="kpi-value" id="k-margem" style="color:var(--yellow)">—</div>
+    <div class="kpi-sub" id="k-margem-sub">sobre pedidos com custo</div>
+  </div>
+  <div class="kpi-card kc-alerta">
+    <div class="kpi-label">Alerta Margem &lt; 20%</div>
+    <div class="kpi-value" id="k-alerta" style="color:var(--red)">—</div>
+    <div class="kpi-sub">pedidos abaixo do limiar</div>
+  </div>
+</div>
+
+<!-- PREVISÃO DE GASTOS -->
+<div class="card">
+  <div class="section-title">🔮 Previsão de Gastos por OS</div>
+  <div class="prev-search">
+    <input type="text" id="prev-busca" class="form-control" placeholder="Digite o número da OS…" onkeydown="if(event.key==='Enter')buscarPrevisao()">
+    <button class="btn-buscar" onclick="buscarPrevisao()">🔍 Buscar OS</button>
+  </div>
+  <div class="prev-result" id="prev-result">
+    <div id="prev-result-content"></div>
+  </div>
+</div>
+
+<!-- TABELA DE PEDIDOS -->
+<div class="card">
+  <div class="section-title">📋 Pedidos — Detalhamento de Custos</div>
+  <div id="fat-table-wrap"><div class="empty-msg">Carregando…</div></div>
+</div>
+
+</div><!-- /view-obras -->
+
+<!-- VIEW GASTOS FIXOS -->
+<div id="view-gastos" style="display:none">
+  <div class="card">
+    <div class="section-title">➕ Lançar Gasto Fixo — <span id="gf-mes-form-label">—</span></div>
+    <div class="gf-form-row">
+      <div class="form-group" style="margin:0">
+        <label>Categoria</label>
+        <select id="gf-cat" class="form-control" onchange="atualizarItensGF()">
+          <option value="">Selecione…</option>
+          <option value="Infraestrutura">🏢 Infraestrutura</option>
+          <option value="Pessoal">👥 Pessoal</option>
+          <option value="Serviços">⚙️ Serviços</option>
+          <option value="Marketing/Financeiro">📣 Marketing/Financeiro</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Descrição</label>
+        <input type="text" id="gf-nome" class="form-control" list="gf-sugestoes" placeholder="Ex: Aluguel" onkeydown="if(event.key==='Enter')adicionarGasto()">
+        <datalist id="gf-sugestoes"></datalist>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Valor (R$)</label>
+        <input type="number" id="gf-valor" class="form-control" min="0" step="0.01" placeholder="0,00" onkeydown="if(event.key==='Enter')adicionarGasto()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label style="white-space:nowrap">Dia Venc.</label>
+        <input type="number" id="gf-dia" class="form-control" min="1" max="31" placeholder="Ex: 5" onkeydown="if(event.key==='Enter')adicionarGasto()" title="Dia do mês em que vence (1 a 31)">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label style="white-space:nowrap">Forma de Pagamento</label>
+        <select id="gf-forma" class="form-control">
+          <option value="">—</option>
+          <option value="Itaú">🟧 Itaú</option>
+          <option value="Nubank">🟪 Nubank</option>
+          <option value="Cartão Corporativo">💳 Cartão Corporativo</option>
+          <option value="Caixa Interno">💵 Caixa Interno</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label style="white-space:nowrap">Fixar Próx. Meses</label>
+        <div style="display:flex;align-items:center;gap:8px;height:40px">
+          <input type="checkbox" id="gf-fixar" style="width:17px;height:17px;cursor:pointer;accent-color:var(--green)">
+          <span style="font-size:11px;color:var(--text-muted)">Replicar</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>&nbsp;</label>
+        <button class="btn-buscar" onclick="adicionarGasto()" style="width:100%;height:40px">+ Adicionar</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>🏢 Despesas Fixas do Mês</span>
+      <span id="gf-total-badge" style="font-family:'DM Mono',monospace;color:var(--orange);font-size:14px;font-weight:700"></span>
+    </div>
+    <div id="gf-table-wrap"><div class="empty-msg">Nenhum gasto lançado para este mês.</div></div>
+  </div>
+</div>
+
+<!-- VIEW GASTOS VARIÁVEIS -->
+<div id="view-variaveis" style="display:none">
+  <div class="card">
+    <div class="section-title">➕ Lançar Gasto Variável — <span id="gv-mes-form-label">—</span></div>
+    <div class="gv-form-row">
+      <div class="form-group" style="margin:0">
+        <label>Categoria</label>
+        <select id="gv-cat" class="form-control">
+          <option value="">Selecione…</option>
+          <optgroup label="Produção / Obras">
+            <option>Matéria-prima extra / Reposição</option>
+            <option>Fretes e Carretos</option>
+            <option>Mão de obra terceirizada (Diárias)</option>
+          </optgroup>
+          <optgroup label="Comerciais / Vendas">
+            <option>Comissões de Vendedores/Closers</option>
+            <option>Taxas de Cartão / Emissão de Boletos</option>
+          </optgroup>
+          <optgroup label="Marketing">
+            <option>Anúncios / Tráfego Pago (Meta/Google Ads)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Descrição</label>
+        <input type="text" id="gv-desc" class="form-control" placeholder="Ex: Frete de vidro temperado" onkeydown="if(event.key==='Enter')adicionarVariavel()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Obra / Pedido / Cliente</label>
+        <select id="gv-pedido" class="form-control"><option value="">🌐 Geral / Sem Vínculo</option></select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Valor (R$)</label>
+        <input type="number" id="gv-valor" class="form-control" min="0" step="0.01" placeholder="0,00" onkeydown="if(event.key==='Enter')adicionarVariavel()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label style="white-space:nowrap">Dia Venc.</label>
+        <input type="number" id="gv-dia" class="form-control" min="1" max="31" placeholder="Ex: 10" onkeydown="if(event.key==='Enter')adicionarVariavel()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>&nbsp;</label>
+        <button class="btn-buscar" onclick="adicionarVariavel()" style="width:100%;height:40px">+ Adicionar</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>📉 Gastos Variáveis do Mês</span>
+      <span id="gv-total-badge" style="font-family:'DM Mono',monospace;color:var(--accent);font-size:14px;font-weight:700"></span>
+    </div>
+    <div id="gv-table-wrap"><div class="empty-msg">Nenhum gasto variável lançado para este mês.</div></div>
+    <!-- Card: Índice de Variabilidade -->
+    <div class="gv-indice-card">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Índice de Variabilidade</div>
+        <div style="font-size:12px;color:var(--text-dim)">Custos variáveis sobre o faturamento bruto do mês</div>
+      </div>
+      <div style="text-align:right">
+        <div class="gv-indice-val" id="gv-indice-total">R$ 0,00</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:4px" id="gv-indice-pct">0% s/ Faturamento</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD DE SAÚDE FINANCEIRA -->
+<div id="health-dashboard" class="health-card">
+  <div class="health-title">💊 Resultado Líquido Mensal — <span id="health-mes-label" style="color:var(--text);font-family:'DM Mono',monospace;font-size:13px;text-transform:none;letter-spacing:0">—</span></div>
+  <div class="health-lines">
+    <div class="health-line hl-bruto">
+      <span class="health-label"><strong style="color:var(--accent)">(+)</strong> Faturamento Bruto</span>
+      <span class="health-hval" id="hd-bruto" style="color:var(--accent)">—</span>
+    </div>
+    <div class="health-line hl-custos">
+      <span class="health-label"><strong style="color:var(--red)">(−)</strong> Custos de Obras (Variáveis) <span style="font-size:10px;color:var(--text-muted)">OS + lançamentos</span></span>
+      <span class="health-hval" id="hd-custos" style="color:var(--red)">—</span>
+    </div>
+    <div class="health-line hl-margem" style="opacity:.85">
+      <span class="health-label" style="font-style:italic">(=) Margem de Contribuição</span>
+      <span class="health-hval" id="hd-margem-contrib" style="color:var(--blue)">—</span>
+    </div>
+    <div class="health-line hl-fixos">
+      <span class="health-label"><strong style="color:var(--orange)">(−)</strong> Gastos Fixos Pagos <span style="font-size:10px;color:var(--text-muted)">(realizado)</span></span>
+      <span class="health-hval" id="hd-fixos" style="color:var(--orange)">—</span>
+    </div>
+    <div class="health-line hl-fixos-pend" style="opacity:.85">
+      <span class="health-label" style="font-style:italic"><strong style="color:var(--yellow)">(−)</strong> Provisão — Contas a Pagar <span style="font-size:10px;color:var(--text-muted)">(pendente)</span></span>
+      <span class="health-hval" id="hd-fixos-pend" style="color:var(--yellow)">—</span>
+    </div>
+  </div>
+  <div class="health-result" id="health-result">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">(=) Lucro Líquido Real do Mês <span style="text-transform:none;font-weight:400">(caixa realizado)</span></div>
+      <div class="health-lucro-value" id="hd-lucro-real">—</div>
+    </div>
+    <div style="text-align:right">
+      <div id="hd-projetado" style="font-size:12px;color:var(--text-dim);margin-top:2px"></div>
+      <div id="hd-pct-fixos" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+    </div>
+  </div>
+  <div class="health-alert" id="health-alert">⚠️ Atenção: Gastos Fixos ultrapassam 30% do Faturamento Bruto — revise as despesas operacionais!</div>
+</div>
+
+<!-- PREVISÃO DE FLUXO DE CAIXA (SAÍDAS POR SEMANA) -->
+<div class="card" id="fluxo-semanal-card">
+  <div class="section-title" style="justify-content:space-between">
+    <span>📆 Previsão de Saídas por Semana — <span id="fluxo-mes-label" style="color:var(--text);font-family:'DM Mono',monospace;font-size:13px;text-transform:none;letter-spacing:0">—</span></span>
+    <span style="font-size:11px;color:var(--text-muted);font-weight:500">Apenas contas pendentes/provisão</span>
+  </div>
+  <canvas id="c-fluxo-semanal" style="max-height:200px"></canvas>
+</div>
+
+<!-- DRE OFICIAL — COMPARATIVO ANUAL -->
+<div class="card" id="dre-card">
+  <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <span>📑 DRE Oficial — Comparativo Anual <span id="dre-ano-label" style="color:var(--accent);font-family:'DM Mono',monospace;font-size:13px;text-transform:none;letter-spacing:0">—</span></span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:none;letter-spacing:0">Impostos s/ Vendas (%)</label>
+      <input type="number" id="dre-aliquota" class="form-control" value="0" min="0" max="100" step="0.5" style="width:80px;height:34px;padding:6px 8px" oninput="renderDRE()">
+    </div>
+  </div>
+  <div class="dre-wrap"><div id="dre-table-wrap"></div></div>
+  <div style="font-size:11px;color:var(--text-muted);margin-top:8px">💡 Regime de competência (lançamentos do mês). % calculada sobre o Faturamento Bruto de cada coluna.</div>
+</div>
+
+<!-- MODAL DE BAIXA / CONFIRMAÇÃO DE PAGAMENTO -->
+<div class="modal-overlay" id="gf-pay-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">✅ Confirmar Pagamento</div>
+      <button class="btn-modal-close" onclick="fecharPagamentoModal()">✕</button>
+    </div>
+    <div style="padding:18px 22px">
+      <input type="hidden" id="gfp-id">
+      <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)" id="gfp-desc">—</div>
+        <div style="font-size:15px;font-family:'DM Mono',monospace;color:var(--orange);font-weight:700;margin-top:3px" id="gfp-valor">—</div>
+      </div>
+      <div class="form-group">
+        <label>Data do Pagamento Real <span style="color:var(--red)">*</span></label>
+        <input type="date" id="gfp-data" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Conta / Forma de Pagamento <span style="color:var(--red)">*</span></label>
+        <select id="gfp-forma" class="form-control">
+          <option value="">Selecione…</option>
+          <option value="Itaú">🟧 Itaú</option>
+          <option value="Nubank">🟪 Nubank</option>
+          <option value="Cartão Corporativo">💳 Cartão Corporativo</option>
+          <option value="Caixa Interno">💵 Caixa Interno</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Comprovante (URL — opcional)</label>
+        <input type="text" id="gfp-comprovante" class="form-control" placeholder="https://… link do comprovante">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharPagamentoModal()">Cancelar</button>
+      <button class="btn" id="gfp-confirm-btn" style="background:var(--green);color:#06251a;font-weight:700" onclick="confirmarPagamento()">✓ Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE EDIÇÃO DE GASTO FIXO -->
+<div class="modal-overlay" id="gf-edit-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar Gasto Fixo</div>
+      <button class="btn-modal-close" onclick="fecharEditarGasto()">✕</button>
+    </div>
+    <div style="padding:18px 22px">
+      <input type="hidden" id="gfe-id">
+      <div id="gfe-serie-hint" style="display:none;font-size:12px;color:var(--accent);background:var(--accent-glow,rgba(91,110,245,.1));border:1px solid rgba(91,110,245,.3);border-radius:8px;padding:8px 12px;margin-bottom:14px">🔁 Gasto recorrente — ao salvar você escolhe aplicar a este mês, aos próximos ou a todos.</div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="gfe-cat" class="form-control">
+          <option value="Infraestrutura">🏢 Infraestrutura</option>
+          <option value="Pessoal">👥 Pessoal</option>
+          <option value="Serviços">⚙️ Serviços</option>
+          <option value="Marketing/Financeiro">📣 Marketing/Financeiro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="gfe-nome" class="form-control" placeholder="Ex: Aluguel">
+      </div>
+      <div class="gf-form-row" style="grid-template-columns:1fr 90px 140px">
+        <div class="form-group" style="margin:0"><label>Valor (R$)</label><input type="number" id="gfe-valor" class="form-control" min="0" step="0.01"></div>
+        <div class="form-group" style="margin:0"><label>Dia Venc.</label><input type="number" id="gfe-dia" class="form-control" min="1" max="31"></div>
+        <div class="form-group" style="margin:0"><label>Forma Pagto</label>
+          <select id="gfe-forma" class="form-control">
+            <option value="">—</option>
+            <option value="Itaú">🟧 Itaú</option>
+            <option value="Nubank">🟪 Nubank</option>
+            <option value="Cartão Corporativo">💳 Cartão Corporativo</option>
+            <option value="Caixa Interno">💵 Caixa Interno</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharEditarGasto()">Cancelar</button>
+      <button class="btn" style="background:var(--accent);color:#fff;font-weight:700" onclick="salvarEdicaoGasto()">💾 Salvar Edição</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE CUSTOS -->
+<div class="modal-overlay" id="fat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Detalhamento de Custos</div>
+      <button class="btn-modal-close" onclick="fecharFatModal()">✕</button>
+    </div>
+    <div class="modal-lead-info">
+      <div class="mli-row"><span class="mli-label">Código</span><span class="mli-value" id="fm-codigo" style="font-family:'DM Mono',monospace;color:var(--accent)"></span></div>
+      <div class="mli-row"><span class="mli-label">Cliente</span><span class="mli-value" id="fm-nome"></span></div>
+      <div class="mli-row"><span class="mli-label">Produto</span><span class="mli-value" id="fm-produto"></span></div>
+      <div class="mli-row"><span class="mli-label">OS</span><span class="mli-value" id="fm-os" style="color:var(--green)"></span></div>
+      <div class="mli-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <span class="mli-label">Faturamento Bruto</span>
+        <span class="mli-bruto" id="fm-bruto"></span>
+      </div>
+    </div>
+
+    <div class="cost-section"><span>📦 Materiais</span></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Gastos Reais c/ Materiais (R$)</label>
+        <input type="number" id="fm-materiais" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+      <div class="form-group">
+        <label>Previsão Orçada de Materiais (R$)</label>
+        <input type="number" id="fm-prev-mat" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+    </div>
+
+    <div class="cost-section"><span>🚚 Logística e Encargos</span></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Logística / Frete (R$)</label>
+        <input type="number" id="fm-logistica" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+      <div class="form-group">
+        <label>Encargos / Impostos (R$)</label>
+        <input type="number" id="fm-encargos" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+    </div>
+
+    <div class="cost-section"><span>👷 Equipe e Comissões</span></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Mão de Obra de Instalação (R$)</label>
+        <input type="number" id="fm-mao-inst" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+      <div class="form-group">
+        <label>Comissão Vendedor (R$)</label>
+        <input type="number" id="fm-comis-vend" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <label>Comissão Arq / Eng (R$)</label>
+        <input type="number" id="fm-comis-arq" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+      </div>
+      <div></div>
+    </div>
+
+    <div class="calc-box">
+      <div class="calc-line">
+        <span class="calc-label">Faturamento Bruto</span>
+        <span class="calc-value" id="cb-bruto" style="color:var(--accent)"></span>
+      </div>
+      <div class="calc-line">
+        <span class="calc-label">( − ) Materiais Reais</span>
+        <span class="calc-value" id="cb-mat" style="color:var(--red)"></span>
+      </div>
+      <div class="calc-line">
+        <span class="calc-label">( − ) Logística + Encargos</span>
+        <span class="calc-value" id="cb-log-enc" style="color:var(--red)"></span>
+      </div>
+      <div class="calc-line">
+        <span class="calc-label">( − ) MO Inst. + Comissões</span>
+        <span class="calc-value" id="cb-comissoes" style="color:var(--red)"></span>
+      </div>
+      <div class="calc-line">
+        <span class="calc-label" style="font-size:11px">Total Deduções</span>
+        <span class="calc-value" id="cb-deducoes" style="color:var(--red)"></span>
+      </div>
+      <div class="calc-line" style="padding:10px 0">
+        <span style="font-weight:700;font-size:14px">Lucro Líquido Real</span>
+        <span class="calc-lucro" id="cb-lucro"></span>
+      </div>
+      <div class="calc-line" style="padding:8px 0 4px">
+        <span style="font-weight:700;font-size:14px">Margem de Lucro</span>
+        <span class="calc-margem" id="cb-margem"></span>
+      </div>
+    </div>
+    <div class="alerta-prejuizo" id="alerta-prejuizo">
+      ⚠️ Margem abaixo de 20% — risco de prejuízo no corte de vidros!
+    </div>
+    <input type="hidden" id="fm-lead-id">
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharFatModal()">Cancelar</button>
+      <button class="btn btn-save" id="btn-salvar-fat" onclick="salvarCustos()">💾 Salvar Custos</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FICHA DE OS / CONTRATO DE PRESTAÇÃO DE SERVIÇOS -->
+<div class="modal-overlay" id="os-card-modal">
+  <div class="modal os-card-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="oc-modal-title">📄 Ficha de OS</div>
+      <button class="btn-modal-close" onclick="fecharOsCard()">✕</button>
+    </div>
+    <div id="os-card-content"></div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:12px;align-items:flex-start">
+      <!-- Painel de Controle de Impressão -->
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">🎛️ Ocultar para impressão</div>
+        <div class="print-toggle-panel">
+          <button class="print-toggle-btn" id="ptb-pag" onclick="toggleOcultarBloco('oc-pag-block',this)" title="Ocultar cronograma de pagamentos">💳 Pagamentos</button>
+          <button class="print-toggle-btn" id="ptb-fin" onclick="toggleOcultarBloco('oc-fin-block',this)" title="Ocultar custos e margens internas">📊 Custos/Margem</button>
+          <button class="print-toggle-btn" id="ptb-tec" onclick="toggleOcultarBloco('oc-tec-block',this)" title="Ocultar relatório técnico anexado">📎 Relatório</button>
+        </div>
+      </div>
+      <!-- Botões de ação -->
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-shrink:0;padding-top:18px">
+        <button class="btn btn-cancel-modal" onclick="fecharOsCard()">Fechar</button>
+        <button class="btn" style="background:var(--purple);color:white;border:none" onclick="imprimirFicha()">🖨️ Imprimir / Salvar PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÁREA DE IMPRESSÃO (oculta na tela, visível no print) -->
+<div id="os-print-area"></div>
+
+<!-- MODAL AUDITORIA ADMINISTRATIVA -->
+<div class="modal-overlay" id="audit-modal">
+  <div class="modal audit-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="audit-title" style="">🔍 Auditoria — OS</div>
+      <button class="btn-modal-close" onclick="fecharAuditModal()">✕</button>
+    </div>
+    <div id="audit-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharAuditModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CAMADA MODULAR (core → services) ═══ -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/supabase.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/services/crmService.js"></script>
+<script src="js/services/financeiroService.js"></script>
+
+<script>
+/* db, TABLES → js/core/supabase.js  |  esc, brl, fmtDate, toast, num → js/core/utils.js
+ * Dados/cálculos financeiros → financeiroService (js/services/financeiroService.js) */
+const V_COLORS={Gabriel:'#5b6ef5',Camille:'#f77082',Lilian:'#22d48f'};
+
+/* ═══ NAVEGAÇÃO TEMPORAL ═══ */
+let anoAtual = new Date().getFullYear();
+let mesAtual = new Date().getMonth(); // 0-11
+const MESES_NOME_FAT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                         'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function nomeMesFat(m,a){ return `${MESES_NOME_FAT[m]} / ${a}`; }
+
+function atualizarNavMesFat(){
+  const el=document.getElementById('nav-mes-label');
+  if(el)el.textContent=nomeMesFat(mesAtual,anoAtual);
+}
+
+function mesMatch(dataStr){
+  if(!dataStr)return false;
+  try{
+    const d=new Date(dataStr+'T00:00:00');
+    return d.getFullYear()===anoAtual && d.getMonth()===mesAtual;
+  }catch{return false;}
+}
+
+async function mesAnterior(){ if(mesAtual===0){mesAtual=11;anoAtual--;}else mesAtual--; atualizarNavMesFat(); await garantirSeriesDoAno(anoAtual); renderPorMes(); }
+async function proximoMes(){ if(mesAtual===11){mesAtual=0;anoAtual++;}else mesAtual++; atualizarNavMesFat(); await garantirSeriesDoAno(anoAtual); renderPorMes(); }
+
+function renderPorMes(){
+  // Filtra por data_aprovacao (competência financeira do pedido)
+  allPedidos = _allPedidosBrutos.filter(p => mesMatch(p.data_aprovacao));
+  renderKPIs();
+  renderTabela();
+  renderGastosFixos();
+  renderVariaveis();
+  renderHealthDashboard();
+  renderFluxoSemanal();
+  renderDRE();
+}
+
+let _allPedidosBrutos = [];   // todos os pedidos do Supabase (sem filtro de mês)
+let allPedidos=[];
+let fatMap={};   // lead_id → faturamento record
+let _auditChart=null;
+
+/* Deduções detalhadas — delega ao financeiroService (lógica centralizada) */
+function fatCustos(f){ return financeiroService.deducoesDetalhadas(f); }
+
+async function carregar(){
+  if(!(await authGate())) return;        // bloqueia sem sessão (mostra login)
+  try{
+    const[{data:leads,error:e1},{data:fat,error:e2}]=await Promise.all([
+      financeiroService.carregarPedidos(),
+      financeiroService.carregarFaturamento()
+    ]);
+    if(e1)throw e1;
+    if(e2)throw e2;
+    _allPedidosBrutos=leads||[];
+    fatMap={};
+    (fat||[]).forEach(f=>{fatMap[f.lead_id]=f});
+    await loadGastosFixosDB();
+    await loadVariaveisDB();
+    await garantirSeriesDoAno(anoAtual);
+    atualizarNavMesFat();
+    renderPorMes();
+    verificarContasVencendo();
+  }catch(e){
+    document.getElementById('fat-table-wrap').innerHTML=`<div class="empty-msg">Erro ao carregar: ${esc(e.message)}</div>`;
+    console.error(e);
+  }finally{
+    const ov=document.getElementById('overlay');
+    ov.style.opacity='0';setTimeout(()=>ov.style.display='none',400);
+  }
+}
+
+function calcDed(f){ return financeiroService.calcDeducoes(f); }
+
+function renderKPIs(){
+  const brutoTotal=allPedidos.reduce((a,b)=>a+parseFloat(b.valor||0),0);
+  const comCusto=allPedidos.filter(p=>fatMap[p.id]);
+  const lucros=comCusto.map(p=>{
+    const ded=calcDed(fatMap[p.id]);
+    return parseFloat(p.valor||0)-ded;
+  });
+  const lucroTotal=lucros.reduce((a,b)=>a+b,0);
+  const margens=comCusto.map((p,i)=>{
+    const v=parseFloat(p.valor||0);
+    return v>0?lucros[i]/v*100:0;
+  });
+  const margemMedia=margens.length?margens.reduce((a,b)=>a+b,0)/margens.length:null;
+  const alertas=margens.filter(m=>m<20).length;
+
+  document.getElementById('k-bruto').textContent=brl(brutoTotal);
+  document.getElementById('k-bruto-sub').textContent=`${allPedidos.length} pedido${allPedidos.length!==1?'s':''}`;
+  document.getElementById('k-lucro').textContent=comCusto.length?brl(lucroTotal):'—';
+  document.getElementById('k-lucro-sub').textContent=comCusto.length?`${comCusto.length} de ${allPedidos.length} com custo lançado`:'nenhum custo lançado';
+  document.getElementById('k-margem').textContent=margemMedia!==null?margemMedia.toFixed(1)+'%':'—';
+  document.getElementById('k-margem-sub').textContent=margens.length?`${margens.length} pedido${margens.length!==1?'s':''} analisado${margens.length!==1?'s':''}`:'sem dados';
+  document.getElementById('k-alerta').textContent=alertas;
+}
+
+function margemPill(pct){
+  if(pct===null)return`<span class="margem-pill mp-none">—</span>`;
+  const cls=pct>=30?'mp-ok':pct>=20?'mp-warn':'mp-danger';
+  return`<span class="margem-pill ${cls}">${pct.toFixed(1)}%</span>`;
+}
+
+function renderTabela(){
+  if(!allPedidos.length){
+    document.getElementById('fat-table-wrap').innerHTML='<div class="empty-msg">Nenhum pedido encontrado.</div>';
+    return;
+  }
+  const rows=allPedidos.map(p=>{
+    const f=fatMap[p.id];
+    let lucro=null,margem=null;
+    if(f){
+      const ded=calcDed(f);
+      lucro=parseFloat(p.valor||0)-ded;
+      const v=parseFloat(p.valor||0);
+      margem=v>0?lucro/v*100:0;
+    }
+    const vColor=V_COLORS[p.vendedor]||'var(--text)';
+    const osHtml=p.os
+      ?`<span class="badge-os">OS</span><span style="font-size:11px;color:var(--green);font-family:'DM Mono',monospace">${esc(p.os)}</span><button class="btn-lupa" onclick="abrirAuditModal(${p.id})" title="Auditoria administrativa desta OS">🔍</button>`
+      :`<span class="badge-sem-os">—</span>`;
+    return`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${esc(p.codigo_orcamento||'—')}</td>
+      <td style="font-weight:600;color:${vColor}">${esc(p.vendedor||'—')}</td>
+      <td>${esc(p.nome||'—')}</td>
+      <td>${esc(p.produto||'—')}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${brl(p.valor)}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green)">${f?brl(lucro):'<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${margemPill(margem)}</td>
+      <td style="white-space:nowrap">${osHtml}</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${p.visita_necessaria&&(p.visita_status||'Pendente')!=='Concluída'
+            ?`<div style="font-size:10px;font-weight:700;color:var(--red);background:var(--red-dim);border:1px solid rgba(240,81,106,0.35);border-radius:6px;padding:3px 8px;white-space:nowrap">🚫 Visita ${p.visita_status||'Pendente'}</div>
+               <button class="btn-detalhe" onclick="abrirFatModal(${p.id})" style="opacity:.55;pointer-events:none" disabled title="Aguardando conclusão da visita técnica">💰 Custos</button>`
+            :`<button class="btn-detalhe" onclick="abrirFatModal(${p.id})">💰 Custos</button>`}
+          <button class="btn-ficha" onclick="abrirOsCard(${p.id})" title="Ficha de OS / Contrato">📄 Ficha OS</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('fat-table-wrap').innerHTML=`
+    <table class="fat-table">
+      <thead><tr>
+        <th>Código</th><th>Vendedor</th><th>Cliente</th><th>Produto</th>
+        <th>Bruto</th><th>Lucro</th><th>Margem</th><th>OS</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function abrirFatModal(leadId){
+  const p=_allPedidosBrutos.find(x=>x.id===leadId);
+  if(!p)return;
+  const f=fatMap[leadId];
+  const c=fatCustos(f);
+  document.getElementById('fm-lead-id').value=leadId;
+  document.getElementById('fm-codigo').textContent=p.codigo_orcamento||'—';
+  document.getElementById('fm-nome').textContent=p.nome||'—';
+  document.getElementById('fm-produto').textContent=p.produto||'—';
+  document.getElementById('fm-os').textContent=p.os||'—';
+  document.getElementById('fm-bruto').textContent=brl(p.valor);
+  document.getElementById('fm-materiais').value=c.mat||'';
+  document.getElementById('fm-prev-mat').value=c.prevMat||'';
+  document.getElementById('fm-logistica').value=c.log||'';
+  document.getElementById('fm-encargos').value=c.enc||'';
+  document.getElementById('fm-mao-inst').value=c.maoInst||'';
+  document.getElementById('fm-comis-vend').value=c.comVend||'';
+  document.getElementById('fm-comis-arq').value=c.comArq||'';
+  calcularModal();
+  document.getElementById('fat-modal').classList.add('open');
+}
+
+function fecharFatModal(){
+  document.getElementById('fat-modal').classList.remove('open');
+}
+
+function calcularModal(){
+  const leadId=parseInt(document.getElementById('fm-lead-id').value);
+  const p=allPedidos.find(x=>x.id===leadId);
+  if(!p)return;
+  const bruto=parseFloat(p.valor||0);
+  const mat=num('fm-materiais');
+  const log=num('fm-logistica');
+  const enc=num('fm-encargos');
+  const maoInst=num('fm-mao-inst');
+  const comVend=num('fm-comis-vend');
+  const comArq=num('fm-comis-arq');
+  const ded=mat+log+enc+maoInst+comVend+comArq;
+  const lucro=bruto-ded;
+  const margem=bruto>0?lucro/bruto*100:0;
+
+  document.getElementById('cb-bruto').textContent=brl(bruto);
+  document.getElementById('cb-mat').textContent=brl(mat);
+  document.getElementById('cb-log-enc').textContent=brl(log+enc);
+  document.getElementById('cb-comissoes').textContent=brl(maoInst+comVend+comArq);
+  document.getElementById('cb-deducoes').textContent=brl(ded);
+
+  const lucroEl=document.getElementById('cb-lucro');
+  lucroEl.textContent=brl(lucro);
+  lucroEl.style.color=lucro>=0?'var(--green)':'var(--red)';
+
+  const margemEl=document.getElementById('cb-margem');
+  margemEl.textContent=margem.toFixed(2)+'%';
+  margemEl.style.color=margem>=20?'var(--green)':margem>=0?'var(--yellow)':'var(--red)';
+
+  const alerta=document.getElementById('alerta-prejuizo');
+  alerta.className='alerta-prejuizo'+(margem<20&&ded>0?' show':'');
+}
+
+async function salvarCustos(){
+  const leadId=parseInt(document.getElementById('fm-lead-id').value);
+  if(!leadId)return;
+  const btn=document.getElementById('btn-salvar-fat');
+  btn.disabled=true;btn.textContent='Salvando…';
+  const dados={
+    lead_id:leadId,
+    materiais:num('fm-materiais'),
+    prev_materiais:num('fm-prev-mat'),
+    logistica:num('fm-logistica'),
+    encargos:num('fm-encargos'),
+    mao_obra_inst:num('fm-mao-inst'),
+    comissao_vendedor:num('fm-comis-vend'),
+    comissao_arq_eng:num('fm-comis-arq'),
+    updated_at:new Date().toISOString()
+  };
+  try{
+    const existing=fatMap[leadId];
+    let error;
+    if(existing){
+      ({error}=await financeiroService.atualizarFaturamento(existing.id, dados));
+    } else {
+      ({error}=await financeiroService.inserirFaturamento(dados));
+    }
+    if(error)throw error;
+    const{data:fat}=await financeiroService.buscarFaturamentoPorLead(leadId);
+    if(fat)fatMap[leadId]=fat;
+    renderKPIs();
+    renderTabela();
+    fecharFatModal();
+    const t=document.createElement('div');
+    t.style.cssText='position:fixed;bottom:24px;right:24px;background:#22d48f;color:#0c0e16;padding:11px 18px;border-radius:8px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(34,212,143,.4)';
+    t.textContent='✅ Custos salvos!';
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),2800);
+  }catch(e){
+    alert('Erro ao salvar: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='💾 Salvar Custos';
+  }
+}
+
+/* ═══ PREVISÃO DE GASTOS POR OS ═══ */
+function buscarPrevisao(){
+  const termo=document.getElementById('prev-busca').value.trim();
+  const res=document.getElementById('prev-result');
+  const cnt=document.getElementById('prev-result-content');
+  if(!termo){res.className='prev-result';return;}
+  const p=allPedidos.find(l=>(l.os||'').toLowerCase()===termo.toLowerCase());
+  if(!p){
+    res.className='prev-result show';
+    cnt.innerHTML=`<div style="color:var(--red);font-size:13px;font-weight:600">OS "${esc(termo)}" não encontrada nos pedidos cadastrados.</div>`;
+    return;
+  }
+  const c=fatCustos(fatMap[p.id]);
+  const bruto=parseFloat(p.valor||0);
+  const realTotal=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq;
+  const delta=c.prevMat-c.mat;
+  const deltaClass=delta>0?'prev-over':delta<0?'prev-under':'prev-ok';
+  const deltaLabel=delta>0?`▲ ${brl(Math.abs(delta))} acima do previsto`:delta<0?`▼ ${brl(Math.abs(delta))} abaixo do previsto`:'✓ Dentro do previsto';
+  res.className='prev-result show';
+  cnt.innerHTML=`
+    <div style="margin-bottom:10px">
+      <span style="font-family:'DM Mono',monospace;color:var(--accent);font-size:13px;font-weight:700">${esc(p.codigo_orcamento||'—')}</span>
+      <span style="margin-left:10px;color:var(--text-dim);font-size:13px">${esc(p.nome||'—')} · ${esc(p.produto||'—')}</span>
+    </div>
+    <div class="prev-grid">
+      <div class="prev-item">
+        <div class="prev-item-label">Previsão Orçada</div>
+        <div class="prev-item-value" style="color:var(--yellow)">${c.prevMat>0?brl(c.prevMat):'—'}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Materiais previstos</div>
+      </div>
+      <div class="prev-item">
+        <div class="prev-item-label">Gasto Real de Materiais</div>
+        <div class="prev-item-value" style="color:var(--red)">${c.mat>0?brl(c.mat):'—'}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Executado até agora</div>
+      </div>
+      <div class="prev-item">
+        <div class="prev-item-label">Total Deduções</div>
+        <div class="prev-item-value">${realTotal>0?brl(realTotal):'—'}</div>
+      </div>
+      <div class="prev-item">
+        <div class="prev-item-label">Faturamento Bruto</div>
+        <div class="prev-item-value" style="color:var(--accent)">${brl(bruto)}</div>
+      </div>
+    </div>
+    ${c.prevMat>0&&c.mat>0?`<div style="margin-top:12px;font-size:12px">
+      Variação Materiais: <span class="prev-delta ${deltaClass}">${deltaLabel}</span>
+    </div>`:''}`;
+}
+
+/* ═══ AUDITORIA ADMINISTRATIVA POR OS ═══ */
+function abrirAuditModal(leadId){
+  const p=_allPedidosBrutos.find(x=>x.id===leadId);
+  if(!p)return;
+  const f=fatMap[leadId];
+  const c=fatCustos(f);
+  const bruto=parseFloat(p.valor||0);
+  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq;
+  const lucro=bruto-ded;
+  const margem=bruto>0?lucro/bruto*100:0;
+  const margemCls=margem>=30?'amb-ok':margem>=20?'amb-warn':'amb-danger';
+  const resultBorderCls=margem>=30?'':margem>=20?'warn':'danger';
+
+  document.getElementById('audit-title').textContent=`🔍 Auditoria — OS: ${p.os||p.codigo_orcamento}`;
+
+  const dedRows=[
+    {label:'Materiais Reais',value:c.mat,color:'#f0516a'},
+    {label:'Previsão Materiais',value:c.prevMat,color:'#fb923c',italic:true},
+    {label:'Logística / Frete',value:c.log,color:'#f5c542'},
+    {label:'Encargos / Impostos',value:c.enc,color:'#38bdf8'},
+    {label:'MO de Instalação',value:c.maoInst,color:'#a78bfa'},
+    {label:'Comissão Vendedor',value:c.comVend,color:'#5b6ef5'},
+    {label:'Comissão Arq/Eng',value:c.comArq,color:'#22d48f'}
+  ].filter(d=>d.value>0);
+
+  // Dados para o gráfico (somente deduções reais, não previsão)
+  const chartLabels=dedRows.filter(d=>!d.italic).map(d=>d.label);
+  const chartData=dedRows.filter(d=>!d.italic).map(d=>d.value);
+  const chartColors=dedRows.filter(d=>!d.italic).map(d=>d.color);
+
+  document.getElementById('audit-content').innerHTML=`
+    <div class="audit-header-info">
+      <div class="audit-kpi">
+        <div class="audit-kpi-label">Código</div>
+        <div class="audit-kpi-value" style="color:var(--accent);font-size:13px">${esc(p.codigo_orcamento||'—')}</div>
+      </div>
+      <div class="audit-kpi">
+        <div class="audit-kpi-label">Cliente</div>
+        <div class="audit-kpi-value" style="font-size:13px">${esc(p.nome||'—')}</div>
+      </div>
+      <div class="audit-kpi">
+        <div class="audit-kpi-label">Vendedor</div>
+        <div class="audit-kpi-value" style="font-size:13px;color:${V_COLORS[p.vendedor]||'var(--text)'}">${esc(p.vendedor||'—')}</div>
+      </div>
+      <div class="audit-kpi">
+        <div class="audit-kpi-label">Data Aprovação</div>
+        <div class="audit-kpi-value" style="font-size:13px">${fmtDate(p.data_aprovacao)}</div>
+      </div>
+    </div>
+    <div class="audit-chart-wrap">
+      <div class="audit-chart-box" style="display:flex;flex-direction:column">
+        <div class="audit-chart-title">Distribuição de Deduções</div>
+        ${chartData.length?`<canvas id="audit-pie" style="max-height:220px"></canvas>`:`<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:40px 0">Nenhum custo lançado</div>`}
+      </div>
+      <div class="audit-deducoes">
+        <div class="audit-chart-title">Detalhamento</div>
+        ${dedRows.length?dedRows.map(d=>`
+          <div class="audit-ded-row" style="${d.italic?'opacity:.7;font-style:italic':''}">
+            <div class="audit-ded-label"><div class="audit-ded-dot" style="background:${d.color}"></div>${esc(d.label)}</div>
+            <div class="audit-ded-value" style="color:${d.color}">${brl(d.value)}</div>
+          </div>`).join(''):`<div style="color:var(--text-muted);font-size:13px">Sem custos registrados.</div>`}
+      </div>
+    </div>
+    ${c.prevMat>0?`<div class="prev-vs-real">
+      <div class="pvr-title">Previsão vs. Real — Materiais</div>
+      <div class="pvr-row"><span style="color:var(--text-muted)">Previsão Orçada</span><span style="font-family:'DM Mono',monospace;color:var(--yellow);font-weight:600">${brl(c.prevMat)}</span></div>
+      <div class="pvr-row"><span style="color:var(--text-muted)">Gasto Real</span><span style="font-family:'DM Mono',monospace;color:var(--red);font-weight:600">${brl(c.mat)}</span></div>
+      <div class="pvr-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
+        <span style="color:var(--text-muted)">Variação</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${c.mat<=c.prevMat?'var(--green)':'var(--red)'}">${c.mat<=c.prevMat?'▼ ':'▲ '}${brl(Math.abs(c.prevMat-c.mat))}</span>
+      </div>
+    </div>`:''}
+    <div class="audit-result-box ${resultBorderCls}">
+      <div>
+        <div class="audit-lucro-label">Faturamento Bruto: <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${brl(bruto)}</span></div>
+        <div class="audit-lucro-label" style="margin-top:4px">Total Deduções: <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--red)">${brl(ded)}</span></div>
+        <div class="audit-lucro-value" style="color:${lucro>=0?'var(--green)':'var(--red)'};margin-top:8px">${brl(lucro)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Lucro Líquido Real</div>
+      </div>
+      <div style="text-align:right">
+        <span class="audit-margem-badge ${margemCls}">${margem.toFixed(1)}%</span>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px">${margem>=30?'✅ Margem saudável':margem>=20?'⚠️ Margem no limiar':'🚨 Margem crítica'}</div>
+      </div>
+    </div>`;
+
+  document.getElementById('audit-modal').classList.add('open');
+
+  // Renderiza gráfico de pizza após o modal abrir (canvas precisa estar no DOM)
+  if(chartData.length){
+    if(_auditChart){_auditChart.destroy();_auditChart=null;}
+    setTimeout(()=>{
+      const ctx=document.getElementById('audit-pie');
+      if(!ctx)return;
+      _auditChart=new Chart(ctx.getContext('2d'),{
+        type:'doughnut',
+        data:{labels:chartLabels,datasets:[{data:chartData,backgroundColor:chartColors,borderColor:'#13151f',borderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:true,cutout:'50%',
+          plugins:{legend:{position:'bottom',labels:{padding:8,usePointStyle:true,pointStyleWidth:7,font:{size:10},color:'#8890b0'}}}}
+      });
+    },80);
+  }
+}
+
+function fecharAuditModal(){
+  document.getElementById('audit-modal').classList.remove('open');
+}
+
+/* ═══ VALIDAÇÃO MATEMÁTICA ═══
+ * Vidro Temperado R$3.000 | Mat R$1.000 | Logística R$300 | MO Inst R$200
+ * Esperado: Deduções R$1.500 | Lucro R$1.500 | Margem 50%
+ */
+function testeFaturamento(){
+  const bruto=3000;
+  const ded=1000+300+200;
+  const lucro=bruto-ded;
+  const margem=lucro/bruto*100;
+  console.assert(lucro===1500,'Lucro deve ser R$1.500');
+  console.assert(margem===50,'Margem deve ser 50%');
+  console.log('[FAT TEST] Bruto:',brl(bruto),'| Deduções:',brl(ded),'| Lucro:',brl(lucro),'| Margem:',margem.toFixed(2)+'% ✅');
+}
+
+/* ═══ FICHA DE OS / CONTRATO DE PRESTAÇÃO DE SERVIÇOS ═══ */
+function abrirOsCard(leadId){
+  resetTogglesPrint(); // limpa estado dos toggles ao abrir nova ficha
+  const p=_allPedidosBrutos.find(x=>x.id===leadId);
+  if(!p) return;
+  const f=fatMap[leadId];
+  const c=fatCustos(f);
+  const bruto=parseFloat(p.valor||0);
+  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq;
+  const lucro=bruto-ded;
+  const margem=bruto>0?lucro/bruto*100:0;
+  const margemCls=margem>=30?'var(--green)':margem>=20?'var(--yellow)':'var(--red)';
+
+  // Endereço completo
+  const endParts=[p.endereco,p.complemento,p.bairro,p.cep].filter(Boolean);
+  const endCompleto=endParts.length?endParts.join(', '):'—';
+
+  // Identificação do cliente
+  let clienteId='';
+  if(p.tipo_doc==='CNPJ'){
+    clienteId=`<div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Razão Social</div><div class="oc-value">${esc(p.razao_social||p.nome||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">CNPJ</div><div class="oc-value" style="font-family:'DM Mono',monospace">${esc(p.cnpj||'—')}</div></div>
+    </div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Nome do Contato</div><div class="oc-value">${esc(p.nome_contato||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Telefone / WhatsApp</div><div class="oc-value">${esc(p.telefone||'—')}</div></div>
+    </div>`;
+  } else {
+    clienteId=`<div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Nome Completo</div><div class="oc-value">${esc(p.nome||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">CPF</div><div class="oc-value" style="font-family:'DM Mono',monospace">${esc(p.cpf||'—')}</div></div>
+    </div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Telefone / WhatsApp</div><div class="oc-value">${esc(p.telefone||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Tipo de Documento</div><div class="oc-value">Pessoa Física — CPF</div></div>
+    </div>`;
+  }
+
+  const finBlock=f?`
+    <div id="oc-fin-block">
+    <div class="oc-section">💰 Resumo Financeiro</div>
+    <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px">
+      <div class="oc-fin-line"><span style="color:var(--text-muted)">Faturamento Bruto</span><span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${brl(bruto)}</span></div>
+      ${c.mat>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) Materiais</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(c.mat)}</span></div>`:''}
+      ${(c.log+c.enc)>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) Logística + Encargos</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(c.log+c.enc)}</span></div>`:''}
+      ${(c.maoInst+c.comVend+c.comArq)>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) MO Inst. + Comissões</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(c.maoInst+c.comVend+c.comArq)}</span></div>`:''}
+      <div class="oc-fin-line" style="padding:8px 0;border-top:2px solid var(--border);margin-top:4px">
+        <span style="font-weight:700;font-size:14px">Lucro Líquido Real</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;color:${lucro>=0?'var(--green)':'var(--red)'}">${brl(lucro)}</span>
+      </div>
+      <div class="oc-fin-line" style="padding:6px 0 2px">
+        <span style="font-weight:700">Margem de Lucro</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${margemCls}">${margem.toFixed(1)}%</span>
+      </div>
+    </div>
+    </div>`:'<div style="color:var(--text-muted);font-size:13px;margin-top:8px">Custos ainda não lançados.</div>';
+
+  // Parcelas de pagamento (coluna JSONB leads.parcelas no Supabase)
+  const pagamentos=(()=>{try{let x=p.parcelas;if(typeof x==='string')x=JSON.parse(x||'[]');return Array.isArray(x)?x:[];}catch{return[];}})();
+  // Relatório técnico (URL pública do Storage — coluna leads.relatorio_tecnico_url)
+  const anexoUrl=p.relatorio_tecnico_url||null;
+  // Helper de formatação de data vencimento
+  const fmtV=(v)=>{if(!v)return'—';try{const[y,m,d]=v.split('-');return d+'/'+m+'/'+y;}catch{return v;}};
+  const pagBlock=pagamentos.length?`
+    <div id="oc-pag-block">
+    <div class="oc-section">💳 Cronograma de Pagamentos</div>
+    <table class="oc-pag-table">
+      <thead><tr><th>Método</th><th>Condição / Prazo</th><th>Vencimento</th><th style="text-align:right">%</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${pagamentos.map(p=>`<tr>
+          <td>${esc(p.metodo||'—')}</td>
+          <td>${esc(p.condicao||'—')}</td>
+          <td style="font-family:'DM Mono',monospace;font-size:11px">${fmtV(p.vencimento)}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${(parseFloat(p.pct)||0).toFixed(1)}%</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--green)">${brl(bruto*(parseFloat(p.pct)||0)/100)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`:'';
+  const anexoIsPdf=anexoUrl&&anexoUrl.toLowerCase().split('?')[0].endsWith('.pdf');
+  const tecBlock=anexoUrl?`
+    <div id="oc-tec-block">
+    <div class="oc-section">📎 Relatório Técnico</div>
+    <div class="oc-anexo-block">
+      <span class="oc-anexo-icon">${anexoIsPdf?'📕':'🖼️'}</span>
+      <div class="oc-anexo-info">
+        <div class="oc-anexo-name">Relatório Técnico do Pedido</div>
+        <div class="oc-anexo-size">Armazenado no Supabase Storage</div>
+      </div>
+      <button class="btn-open-anexo" onclick="abrirAnexoTecnico('${esc(anexoUrl)}')">📂 Abrir</button>
+    </div>
+    </div>`:'';
+
+  const html=`
+    <div class="oc-section" style="margin-top:0;padding-top:0;border-top:none">📋 Identificação do Pedido</div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Código do Orçamento</div><div class="oc-value" style="font-family:'DM Mono',monospace;color:var(--accent)">${esc(p.codigo_orcamento||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">OS — Ordem de Serviço</div><div class="oc-value" style="color:var(--green)">${esc(p.os||'—')}</div></div>
+    </div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Vendedor Responsável</div><div class="oc-value" style="color:${V_COLORS[p.vendedor]||'var(--text)'}">${esc(p.vendedor||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Data de Aprovação</div><div class="oc-value">${fmtDate(p.data_aprovacao)}</div></div>
+    </div>
+
+    <div class="oc-section">👤 Dados do Cliente</div>
+    ${clienteId}
+
+    <div class="oc-section">📍 Endereço de Instalação</div>
+    <div class="oc-full"><div class="oc-label">Endereço Completo</div><div class="oc-value" style="margin-top:4px">${esc(endCompleto)}</div></div>
+
+    <div class="oc-section">🔧 Dados Técnicos da Obra</div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Produto / Serviço</div><div class="oc-value">${esc(p.produto||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Valor do Contrato</div><div class="oc-value" style="font-family:'DM Mono',monospace;color:var(--accent)">${brl(p.valor)}</div></div>
+    </div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Período da Obra</div><div class="oc-value">${esc(p.periodo_obra||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Visita Técnica</div><div class="oc-value">${p.visita_data?fmtDate(p.visita_data)+' — '+(p.visita_status||'Pendente'):'Não agendada'}</div></div>
+    </div>
+    <div class="oc-grid">
+      <div class="oc-item"><div class="oc-label">Prazo de Entrega</div><div class="oc-value">${esc(p.prazo_entrega||'—')}</div></div>
+      <div class="oc-item"><div class="oc-label">Previsão de Instalação</div><div class="oc-value">${fmtDate(p.prev_instalacao)||'—'}</div></div>
+    </div>
+    ${finBlock}${pagBlock}${tecBlock}`;
+
+  document.getElementById('oc-modal-title').textContent='📄 Ficha OS — '+(p.os||p.codigo_orcamento);
+  document.getElementById('os-card-content').innerHTML=html;
+  document.getElementById('os-card-modal').classList.add('open');
+}
+
+async function abrirAnexoTecnico(ref){
+  // ref = caminho no Storage privado. Gera URL ASSINADA temporária (1h) e abre.
+  if(!ref){ toast('Nenhum relatório técnico encontrado para este pedido','err'); return; }
+  let url=ref;
+  if(!/^https?:\/\//i.test(ref)){
+    try{
+      const{data,error}=await crmService.urlAssinadaRelatorio(ref,3600);
+      if(error||!data?.signedUrl) throw error||new Error('sem URL');
+      url=data.signedUrl;
+    }catch(e){ toast('Erro ao gerar link do relatório: '+(e.message||e),'err'); return; }
+  }
+  const win=window.open(url,'_blank');
+  if(!win){ toast('Pop-up bloqueado — permita pop-ups neste site para abrir o relatório','err'); return; }
+}
+function fecharOsCard(){
+  document.getElementById('os-card-modal').classList.remove('open');
+  resetTogglesPrint();
+}
+
+/* ── Print Visibility Toggles ─────────────────────────────────────── */
+function toggleOcultarBloco(blockId, btn){
+  const icons = {'oc-pag-block':'💳 Pagamentos','oc-fin-block':'📊 Custos/Margem','oc-tec-block':'📎 Relatório'};
+  const el = document.getElementById(blockId);
+  if(!el){
+    btn.style.opacity='0.35';
+    btn.title='Seção não disponível para este pedido';
+    return;
+  }
+  const ocultar = el.classList.toggle('print-hide');
+  btn.classList.toggle('active', ocultar);
+  btn.textContent = ocultar ? '✓ ' + (icons[blockId]||blockId) : (icons[blockId]||blockId);
+  btn.title = ocultar ? 'Clique para exibir novamente' : 'Clique para ocultar na impressão';
+  btn.style.opacity='';
+}
+function resetTogglesPrint(){
+  document.querySelectorAll('.print-toggle-btn').forEach(b => {
+    b.classList.remove('active');
+    const icons = {'ptb-pag':'💳 Pagamentos','ptb-fin':'📊 Custos/Margem','ptb-tec':'📎 Relatório'};
+    if(icons[b.id]) b.textContent = icons[b.id];
+  });
+}
+
+function imprimirFicha(){
+  // Copia o conteúdo para a área de impressão e aciona window.print()
+  const content=document.getElementById('os-card-content').innerHTML;
+  const title=document.getElementById('oc-modal-title').textContent;
+  document.getElementById('os-print-area').innerHTML=`
+    <div class="os-print-header">
+      <div>
+        <div class="os-print-title">Conceito Vidros &amp; Projetos</div>
+        <div class="os-print-sub">Ficha de Execução / Contrato de Prestação de Serviços</div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#666">
+        <div style="font-weight:700;font-size:15px">${esc(title)}</div>
+        <div>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</div>
+      </div>
+    </div>
+    ${content}`;
+  window.print();
+}
+
+/* ═══ ALTERNÂNCIA DE VIEWS ═══ */
+function setView(view){
+  document.getElementById('view-obras').style.display    = view==='obras'    ? '' : 'none';
+  document.getElementById('view-gastos').style.display   = view==='gastos'   ? '' : 'none';
+  document.getElementById('view-variaveis').style.display= view==='variaveis'? '' : 'none';
+  document.getElementById('tab-obras').className    = 'view-tab' + (view==='obras'    ?' active':'');
+  document.getElementById('tab-gastos').className   = 'view-tab' + (view==='gastos'   ?' active':'');
+  document.getElementById('tab-variaveis').className= 'view-tab' + (view==='variaveis'?' active':'');
+  if(view==='variaveis'){ popularPedidoSelect(); renderVariaveis(); }
+}
+
+/* ═══ GASTOS FIXOS (dados via financeiroService) ═══ */
+let _gastosCache=[];   // espelho local da tabela gastos_fixos
+
+async function loadGastosFixosDB(){
+  try{
+    const{data,error}=await financeiroService.carregarGastos();
+    if(error)throw error;
+    _gastosCache=(data||[]).map(g=>({...g,valor:parseFloat(g.valor||0)}));
+  }catch(e){ console.warn('gastos_fixos load:',e.message); }
+  return _gastosCache;
+}
+const GF_SUGESTOES={
+  'Infraestrutura':['Aluguel','IPTU','Água/Esgoto','Energia Elétrica','Telefone','Internet'],
+  'Pessoal':['Folha de Pagamento','Pró-labore','FGTS/INSS','Benefícios','Vale-Transporte','Vale-Refeição'],
+  'Serviços':['Software/SaaS (CRM)','Contador','Limpeza','Manutenção','Segurança','Consultoria'],
+  'Marketing/Financeiro':['Anúncios Google/Meta','Taxas Bancárias','Juros/IOF','Material Gráfico','Outros']
+};
+const GF_CAT_CLASS={'Infraestrutura':'bc-infra','Pessoal':'bc-pessoal','Serviços':'bc-servicos','Marketing/Financeiro':'bc-marketing'};
+
+function loadGastosFixos(){return _gastosCache;}
+function getGastosMes(m,a){return _gastosCache.filter(g=>g.mes===m&&g.ano===a);}
+
+function atualizarItensGF(){
+  const cat=document.getElementById('gf-cat').value;
+  const dl=document.getElementById('gf-sugestoes');
+  dl.innerHTML=(GF_SUGESTOES[cat]||[]).map(s=>`<option value="${esc(s)}">`).join('');
+}
+
+async function adicionarGasto(){
+  const cat=document.getElementById('gf-cat').value.trim();
+  const nome=document.getElementById('gf-nome').value.trim();
+  const val=parseFloat(document.getElementById('gf-valor').value)||0;
+  const fixar=document.getElementById('gf-fixar').checked;
+  const forma=document.getElementById('gf-forma').value||null;
+  let dia=parseInt(document.getElementById('gf-dia').value)||null;
+  if(dia!==null){ if(dia<1)dia=1; if(dia>31)dia=31; }
+  if(!cat){alert('Selecione uma categoria.');return;}
+  if(!nome){document.getElementById('gf-nome').focus();return;}
+  if(!val){document.getElementById('gf-valor').focus();return;}
+  const base={categoria:cat,nome,valor:val,fixar_proximo:fixar,dia_vencimento:dia,
+    status_pagamento:'Pendente',forma_pagamento:forma,data_pagamento_real:null,comprovante_url:null,pago:false,pago_em:null};
+  try{
+    if(fixar){
+      // Recorrente → gera a série do mês atual até dezembro do ano (mesma serie_id)
+      const serie='serie_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      const rows=[];
+      for(let m=mesAtual;m<=11;m++) rows.push({...base,mes:m,ano:anoAtual,serie_id:serie});
+      const{error}=await financeiroService.inserirGastos(rows);
+      if(error)throw error;
+    } else {
+      const{error}=await financeiroService.inserirGasto({...base,mes:mesAtual,ano:anoAtual,serie_id:null});
+      if(error)throw error;
+    }
+    await loadGastosFixosDB();
+  }catch(e){ toast('Erro ao salvar gasto: '+e.message,'err'); return; }
+  ['gf-nome','gf-valor','gf-dia','gf-forma'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('gf-fixar').checked=false;
+  toast(fixar?('✅ Gasto recorrente lançado de '+nomeMesFat(mesAtual,anoAtual).split(' / ')[0]+' até Dezembro!'):'✅ Gasto lançado!');
+  renderGastosFixos();
+  renderHealthDashboard();
+  renderFluxoSemanal();
+  verificarContasVencendo();
+}
+
+/* ── Escopo de série (este / próximos / todos) ───────────────────────── */
+/* Retorna os ids alvo. Em operações de massa preserva PAGOS (exceto o item clicado). */
+function _idsDaSerie(g, escopo){
+  if(!g.serie_id || escopo==='este') return [g.id];
+  let lista=_gastosCache.filter(x=>x.serie_id===g.serie_id);
+  if(escopo==='proximos') lista=lista.filter(x=> x.ano>g.ano || (x.ano===g.ano && x.mes>=g.mes));
+  lista=lista.filter(x=> String(x.id)===String(g.id) || !isPago(x));  // preserva pagos
+  return lista.map(x=>x.id);
+}
+function _escopoDialog(acao, onPick){
+  const ex=document.getElementById('gf-escopo-dlg'); if(ex)ex.remove();
+  const dlg=document.createElement('div');
+  dlg.id='gf-escopo-dlg';
+  dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:10001';
+  dlg.innerHTML=`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:26px 28px;max-width:430px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.5)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">🔁 Gasto recorrente</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px">Este gasto se repete em vários meses. Onde deseja <strong>${esc(acao)}</strong>?</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text);text-align:left;padding:11px 14px;font-weight:600" data-e="este">📌 Apenas este mês</button>
+      <button class="btn" style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text);text-align:left;padding:11px 14px;font-weight:600" data-e="proximos">⏭️ Este mês e os próximos</button>
+      <button class="btn" style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text);text-align:left;padding:11px 14px;font-weight:600" data-e="todos">📚 Todos os meses <span style="font-size:11px;color:var(--text-muted)">(preserva pagos)</span></button>
+    </div>
+    <div style="text-align:right;margin-top:16px"><button class="btn btn-cancel-modal" data-e="cancel">Cancelar</button></div>
+  </div>`;
+  dlg.addEventListener('click',e=>{
+    if(e.target===dlg){dlg.remove();return;}
+    const b=e.target.closest('[data-e]'); if(!b)return;
+    const op=b.getAttribute('data-e'); dlg.remove();
+    if(op!=='cancel') onPick(op);
+  });
+  document.body.appendChild(dlg);
+}
+
+function removerGasto(id){
+  const g=_gastosCache.find(x=>String(x.id)===String(id)); if(!g)return;
+  if(g.serie_id){ _escopoDialog('excluir',(escopo)=>_executarExclusaoGasto(g,escopo)); }
+  else { if(confirm('Remover este gasto fixo?')) _executarExclusaoGasto(g,'este'); }
+}
+async function _executarExclusaoGasto(g, escopo){
+  const ids=_idsDaSerie(g,escopo);
+  try{
+    const{error}= ids.length>1 ? await financeiroService.deletarGastosIn(ids) : await financeiroService.deletarGasto(ids[0]);
+    if(error)throw error;
+    _gastosCache=_gastosCache.filter(x=>!ids.includes(x.id));
+    toast(`🗑️ ${ids.length} lançamento(s) removido(s).`);
+  }catch(e){ toast('Erro ao remover: '+e.message,'err'); return; }
+  renderGastosFixos(); renderHealthDashboard(); renderFluxoSemanal();
+}
+
+/* ── Edição de gasto fixo (com escopo de série) ─────────────────────── */
+function abrirEditarGasto(id){
+  const g=_gastosCache.find(x=>String(x.id)===String(id)); if(!g)return;
+  document.getElementById('gfe-id').value=id;
+  document.getElementById('gfe-cat').value=g.categoria||'Infraestrutura';
+  document.getElementById('gfe-nome').value=g.nome||'';
+  document.getElementById('gfe-valor').value=g.valor||'';
+  document.getElementById('gfe-dia').value=g.dia_vencimento||'';
+  document.getElementById('gfe-forma').value=g.forma_pagamento||'';
+  document.getElementById('gfe-serie-hint').style.display=g.serie_id?'block':'none';
+  document.getElementById('gf-edit-modal').classList.add('open');
+}
+function fecharEditarGasto(){ document.getElementById('gf-edit-modal').classList.remove('open'); }
+function salvarEdicaoGasto(){
+  const id=document.getElementById('gfe-id').value;
+  const g=_gastosCache.find(x=>String(x.id)===String(id)); if(!g)return;
+  const nome=document.getElementById('gfe-nome').value.trim();
+  const val=parseFloat(document.getElementById('gfe-valor').value)||0;
+  let dia=parseInt(document.getElementById('gfe-dia').value)||null; if(dia!==null){if(dia<1)dia=1;if(dia>31)dia=31;}
+  if(!nome){ toast('Informe a descrição','err'); return; }
+  if(!val){ toast('Informe o valor','err'); return; }
+  const upd={categoria:document.getElementById('gfe-cat').value,nome,valor:val,dia_vencimento:dia,forma_pagamento:document.getElementById('gfe-forma').value||null};
+  if(g.serie_id){ _escopoDialog('editar',(escopo)=>_executarEdicaoGasto(g,upd,escopo)); }
+  else { _executarEdicaoGasto(g,upd,'este'); }
+}
+async function _executarEdicaoGasto(g, upd, escopo){
+  const ids=_idsDaSerie(g,escopo);
+  try{
+    const{error}= ids.length>1 ? await financeiroService.atualizarGastosIn(ids,upd) : await financeiroService.atualizarGasto(ids[0],upd);
+    if(error)throw error;
+    await loadGastosFixosDB();
+    toast(`✅ ${ids.length} lançamento(s) atualizado(s).`);
+  }catch(e){ toast('Erro ao editar: '+e.message,'err'); return; }
+  fecharEditarGasto();
+  renderGastosFixos(); renderHealthDashboard(); renderFluxoSemanal();
+}
+
+/* Continuidade das séries no virar do ano: ao abrir um ano que ainda não tem
+ * instâncias de uma série recorrente ativa, gera Jan→Dez desse ano (preserva
+ * deleções pontuais dentro de um ano já existente). */
+async function garantirSeriesDoAno(ano){
+  const recentePorSerie={};
+  _gastosCache.forEach(g=>{
+    if(!g.serie_id||!g.fixar_proximo)return;
+    const cur=recentePorSerie[g.serie_id];
+    if(!cur || g.ano>cur.ano || (g.ano===cur.ano&&g.mes>cur.mes)) recentePorSerie[g.serie_id]=g;
+  });
+  const novos=[];
+  for(const sid in recentePorSerie){
+    const base=recentePorSerie[sid];
+    if(base.ano>=ano) continue;                                   // série já alcança esse ano
+    if(_gastosCache.some(g=>g.serie_id===sid&&g.ano===ano)) continue;
+    for(let m=0;m<=11;m++){
+      novos.push({categoria:base.categoria,nome:base.nome,valor:base.valor,mes:m,ano,
+        fixar_proximo:true,dia_vencimento:base.dia_vencimento||null,forma_pagamento:base.forma_pagamento||null,
+        status_pagamento:'Pendente',data_pagamento_real:null,comprovante_url:null,pago:false,pago_em:null,serie_id:sid});
+    }
+  }
+  if(!novos.length)return false;
+  try{
+    const{error}=await financeiroService.inserirGastos(novos);
+    if(error)throw error;
+    await loadGastosFixosDB();
+    return true;
+  }catch(e){ console.warn('garantir séries do ano:',e.message); return false; }
+}
+
+/* ── Helpers de status / vencimento (Contas a Pagar) ─────────────────── */
+const GF_FORMAS=['Itaú','Nubank','Cartão Corporativo','Caixa Interno'];
+function isPago(g){return financeiroService.ehPago(g);}
+// Status EFETIVO exibido: Pago / Atrasado / Agendado / Pendente
+function statusGasto(g){
+  const base=g.status_pagamento||(g.pago?'Pago':'Pendente');
+  if(base==='Pago') return 'Pago';
+  if(base==='Agendado') return 'Agendado';
+  // Pendente → vira Atrasado se o vencimento já passou
+  return estaVencido(g)?'Atrasado':'Pendente';
+}
+// Verdadeiro se a conta (não paga) já passou do vencimento
+function estaVencido(g){
+  if(!g.dia_vencimento) return false;
+  const hoje=new Date();
+  if(anoAtual<hoje.getFullYear()) return true;
+  if(anoAtual>hoje.getFullYear()) return false;
+  if(mesAtual<hoje.getMonth()) return true;
+  if(mesAtual>hoje.getMonth()) return false;
+  return g.dia_vencimento<hoje.getDate();
+}
+function venceHoje(g){
+  if(!g.dia_vencimento) return false;
+  const hoje=new Date();
+  return anoAtual===hoje.getFullYear()&&mesAtual===hoje.getMonth()&&g.dia_vencimento===hoje.getDate();
+}
+// Soma de gastos PAGOS do mês (realizado / caixa)
+function getFixosPagos(m,a){return getGastosMes(m,a).filter(isPago).reduce((s,g)=>s+parseFloat(g.valor||0),0);}
+// Soma de gastos PENDENTES/AGENDADOS/ATRASADOS (provisão de contas a pagar)
+function getFixosPendentes(m,a){return getGastosMes(m,a).filter(g=>!isPago(g)).reduce((s,g)=>s+parseFloat(g.valor||0),0);}
+function fmtVenc(g){return g.dia_vencimento?('Dia '+String(g.dia_vencimento).padStart(2,'0')):'—';}
+function fmtDataReal(g){return g.data_pagamento_real?(()=>{const[y,mm,d]=g.data_pagamento_real.split('-');return d+'/'+mm+'/'+y;})():'—';}
+
+/* ── Altera status direto (Pendente/Agendado) ou abre modal (Pago) ── */
+async function mudarStatusGasto(id,novoStatus){
+  if(novoStatus==='Pago'){ abrirPagamentoModal(id); return; }
+  const g=_gastosCache.find(x=>String(x.id)===String(id)); if(!g)return;
+  try{
+    const{error}=await financeiroService.atualizarGasto(id,{status_pagamento:novoStatus,pago:false,pago_em:null,data_pagamento_real:null});
+    if(error)throw error;
+    Object.assign(g,{status_pagamento:novoStatus,pago:false,pago_em:null,data_pagamento_real:null});
+    toast('Status atualizado para "'+novoStatus+'"',novoStatus==='Agendado'?'warn':'ok');
+  }catch(e){ toast('Erro ao atualizar status: '+e.message,'err'); return; }
+  renderGastosFixos(); renderHealthDashboard(); renderFluxoSemanal(); verificarContasVencendo();
+}
+
+/* ── Modal de baixa: define Data Real + Conta antes de marcar Pago ──
+ *    Genérico: tipo='fixo' (gastos_fixos) ou 'variavel' (crm_gastos_variaveis) */
+let _payTipo='fixo';
+function abrirPagamentoModal(id, tipo='fixo'){
+  _payTipo=tipo;
+  const cache=tipo==='variavel'?_variaveisCache:_gastosCache;
+  const g=cache.find(x=>String(x.id)===String(id)); if(!g)return;
+  document.getElementById('gfp-id').value=id;
+  document.getElementById('gfp-desc').textContent=g.nome||g.descricao||'—';
+  document.getElementById('gfp-valor').textContent=brl(g.valor);
+  document.getElementById('gfp-data').value=g.data_pagamento_real||new Date().toISOString().split('T')[0];
+  document.getElementById('gfp-forma').value=g.forma_pagamento||'';
+  document.getElementById('gfp-comprovante').value=g.comprovante_url||'';
+  document.getElementById('gf-pay-modal').classList.add('open');
+}
+function fecharPagamentoModal(){ document.getElementById('gf-pay-modal').classList.remove('open'); if(_payTipo==='variavel')renderVariaveis(); else renderGastosFixos(); }
+async function confirmarPagamento(){
+  const id=document.getElementById('gfp-id').value;
+  const data=document.getElementById('gfp-data').value;
+  const forma=document.getElementById('gfp-forma').value;
+  const comp=document.getElementById('gfp-comprovante').value.trim()||null;
+  if(!data){ toast('Informe a data do pagamento','err'); return; }
+  if(!forma){ toast('Selecione a conta / forma de pagamento','err'); return; }
+  const btn=document.getElementById('gfp-confirm-btn'); btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    if(_payTipo==='variavel'){
+      const v=_variaveisCache.find(x=>String(x.id)===String(id)); if(!v)throw new Error('item não encontrado');
+      const upd={status:'Pago',data_pagamento_real:data,forma_pagamento:forma,comprovante_url:comp,pago_em:new Date().toISOString()};
+      const{error}=await financeiroService.atualizarVariavel(id,upd); if(error)throw error;
+      Object.assign(v,upd);
+    } else {
+      const g=_gastosCache.find(x=>String(x.id)===String(id)); if(!g)throw new Error('item não encontrado');
+      const upd={status_pagamento:'Pago',pago:true,pago_em:new Date().toISOString(),data_pagamento_real:data,forma_pagamento:forma,comprovante_url:comp};
+      const{error}=await financeiroService.atualizarGasto(id,upd); if(error)throw error;
+      Object.assign(g,upd);
+    }
+    toast('✅ Pagamento confirmado — '+forma);
+  }catch(e){ toast('Erro ao confirmar pagamento: '+e.message,'err'); btn.disabled=false; btn.textContent='✓ Confirmar Pagamento'; return; }
+  btn.disabled=false; btn.textContent='✓ Confirmar Pagamento';
+  document.getElementById('gf-pay-modal').classList.remove('open');
+  if(_payTipo==='variavel'){ renderVariaveis(); renderHealthDashboard(); renderDRE(); }
+  else { renderGastosFixos(); renderHealthDashboard(); renderFluxoSemanal(); verificarContasVencendo(); }
+}
+
+function renderGastosFixos(){
+  const label=nomeMesFat(mesAtual,anoAtual);
+  const lbl=document.getElementById('gf-mes-form-label');
+  if(lbl)lbl.textContent=label;
+  const gastos=getGastosMes(mesAtual,anoAtual);
+  const wrap=document.getElementById('gf-table-wrap');
+  const badge=document.getElementById('gf-total-badge');
+  if(!wrap)return;
+  if(!gastos.length){
+    wrap.innerHTML='<div class="empty-msg">Nenhum gasto lançado para este mês.<br><span style="font-size:11px">Use o formulário acima para adicionar despesas operacionais.</span></div>';
+    if(badge)badge.textContent='';
+    return;
+  }
+  const cats=['Infraestrutura','Pessoal','Serviços','Marketing/Financeiro'];
+  const stMap={'Pago':'s-pago','Atrasado':'s-atrasado','Agendado':'s-agendado','Pendente':'s-pendente'};
+  const NCOLS=8;
+  let rows='',total=0,totalPago=0;
+  for(const cat of cats){
+    const items=gastos.filter(g=>g.categoria===cat);
+    if(!items.length)continue;
+    const sub=items.reduce((a,b)=>a+parseFloat(b.valor||0),0);
+    total+=sub;
+    rows+=`<tr class="gf-cat-row"><td colspan="${NCOLS}"><span class="${GF_CAT_CLASS[cat]||'bc-infra'}">${esc(cat)}</span></td></tr>`;
+    for(const g of items){
+      const pago=isPago(g);
+      if(pago) totalPago+=parseFloat(g.valor||0);
+      const st=statusGasto(g);
+      const vencCls=(st==='Atrasado')?' vencido':(venceHoje(g)&&!pago)?' hoje':'';
+      const vencExtra=(st==='Atrasado')?' ⚠️':(venceHoje(g)&&!pago)?' • hoje':'';
+      const baseStored=g.status_pagamento||(g.pago?'Pago':'Pendente');
+      const stSel=baseStored==='Pago'?'Pago':baseStored==='Agendado'?'Agendado':'Pendente';
+      const statusCell=`<select class="gf-status-sel" onchange="mudarStatusGasto('${g.id}',this.value)" title="Alterar status">
+          <option value="Pendente"${stSel==='Pendente'?' selected':''}>○ Pendente</option>
+          <option value="Agendado"${stSel==='Agendado'?' selected':''}>📅 Agendado</option>
+          <option value="Pago"${stSel==='Pago'?' selected':''}>✓ Pago</option>
+        </select> <span class="gf-status-badge ${stMap[st]}">${st}</span>`;
+      const clip=g.comprovante_url
+        ? `<a class="gf-clip has" href="${esc(g.comprovante_url)}" target="_blank" rel="noopener" title="Ver comprovante">📎</a>`
+        : `<span class="gf-clip empty" title="Sem comprovante">📎</span>`;
+      rows+=`<tr class="${pago?'gf-row-pago':''}">
+        <td style="padding-left:20px">${esc(g.nome)}</td>
+        <td><span class="gf-venc-badge${vencCls}">${fmtVenc(g)}${vencExtra}</span></td>
+        <td style="font-family:'DM Mono',monospace;color:var(--orange);font-weight:600">${brl(g.valor)}</td>
+        <td>${g.fixar_proximo?'<span class="gf-fixar-badge">🔁 Fixo</span>':'<span style="color:var(--text-muted);font-size:11px">—</span>'}</td>
+        <td>${statusCell}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">${fmtDataReal(g)}</td>
+        <td><span class="gf-conta-tag">${g.forma_pagamento?esc(g.forma_pagamento):'—'}</span></td>
+        <td style="text-align:right;white-space:nowrap">${clip}<button class="btn-gf-del" onclick="abrirEditarGasto('${g.id}')" title="Editar">✏️</button><button class="btn-gf-del" onclick="removerGasto('${g.id}')" title="Remover">✕</button></td>
+      </tr>`;
+    }
+    rows+=`<tr class="gf-total-row"><td colspan="2" style="padding-left:20px;font-weight:600">Subtotal ${esc(cat)}</td><td style="font-family:'DM Mono',monospace;font-weight:700">${brl(sub)}</td><td colspan="5"></td></tr>`;
+  }
+  wrap.innerHTML=`<table class="gf-table"><thead><tr><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Recorrência</th><th>Status</th><th>Data Real</th><th>Conta</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  if(badge)badge.innerHTML=`Pago: <span style="color:var(--green)">${brl(totalPago)}</span> &nbsp;·&nbsp; Total: ${brl(total)}`;
+}
+
+/* ── Alerta de contas a pagar vencidas / vencendo ── */
+function verificarContasVencendo(){
+  const hoje=new Date();
+  const ehMesCorrente=(mesAtual===hoje.getMonth() && anoAtual===hoje.getFullYear());
+  if(!ehMesCorrente)return;
+  const dia=hoje.getDate();
+  const pend=getGastosMes(mesAtual,anoAtual).filter(g=>!isPago(g) && g.dia_vencimento);
+  const vencidas=pend.filter(g=>g.dia_vencimento<dia).length;
+  const hojeQt =pend.filter(g=>g.dia_vencimento===dia).length;
+  const breve  =pend.filter(g=>g.dia_vencimento>dia && g.dia_vencimento<=dia+3).length;
+  if(vencidas+hojeQt>0){
+    const partes=[];
+    if(vencidas)partes.push(`${vencidas} vencida${vencidas>1?'s':''}`);
+    if(hojeQt)partes.push(`${hojeQt} vencendo hoje`);
+    toast('⚠️ Atenção: Você tem '+partes.join(' e ')+'!','warn');
+  } else if(breve>0){
+    toast(`🔔 ${breve} conta${breve>1?'s':''} a pagar vencendo nos próximos 3 dias.`,'warn');
+  }
+}
+
+/* ═══ GASTOS VARIÁVEIS (dados via financeiroService) ═══ */
+let _variaveisCache=[];
+
+async function loadVariaveisDB(){
+  try{
+    const{data,error}=await financeiroService.carregarVariaveis();
+    if(error)throw error;
+    _variaveisCache=(data||[]).map(v=>({...v,valor:parseFloat(v.valor||0)}));
+  }catch(e){ console.warn('gastos_variaveis load:',e.message); }
+  return _variaveisCache;
+}
+
+/* Popula o <select> de Obra/Pedido a partir dos pedidos carregados */
+function popularPedidoSelect(){
+  const sel=document.getElementById('gv-pedido'); if(!sel)return;
+  const cur=sel.value;
+  const opts=_allPedidosBrutos.map(p=>
+    `<option value="${p.id}">${esc((p.codigo_orcamento||('#'+p.id))+' — '+(p.nome||p.razao_social||'Cliente'))}</option>`
+  ).join('');
+  sel.innerHTML='<option value="">🌐 Geral / Sem Vínculo</option>'+opts;
+  if(cur)sel.value=cur;
+}
+
+async function adicionarVariavel(){
+  const cat=document.getElementById('gv-cat').value.trim();
+  const desc=document.getElementById('gv-desc').value.trim();
+  const val=parseFloat(document.getElementById('gv-valor').value)||0;
+  const pedidoId=document.getElementById('gv-pedido').value||null;
+  let dia=parseInt(document.getElementById('gv-dia').value)||null;
+  if(dia!==null){ if(dia<1)dia=1; if(dia>31)dia=31; }
+  if(!cat){ toast('Selecione a categoria','err'); return; }
+  if(!desc){ document.getElementById('gv-desc').focus(); return; }
+  if(!val){ document.getElementById('gv-valor').focus(); return; }
+  try{
+    const{error}=await financeiroService.inserirVariavel({
+      categoria:cat, descricao:desc, valor:val, dia_vencimento:dia,
+      status:'Pendente', pedido_id:pedidoId?parseInt(pedidoId):null,
+      mes:mesAtual, ano:anoAtual
+    });
+    if(error)throw error;
+    await loadVariaveisDB();
+  }catch(e){ toast('Erro ao salvar gasto variável: '+e.message,'err'); return; }
+  ['gv-desc','gv-valor','gv-dia','gv-cat','gv-pedido'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  toast('✅ Gasto variável lançado!');
+  renderVariaveis(); renderHealthDashboard(); renderDRE();
+}
+
+async function removerVariavel(id){
+  if(!confirm('Remover este gasto variável?'))return;
+  try{
+    const{error}=await financeiroService.deletarVariavel(id);
+    if(error)throw error;
+    _variaveisCache=_variaveisCache.filter(v=>String(v.id)!==String(id));
+  }catch(e){ toast('Erro ao remover: '+e.message,'err'); return; }
+  renderVariaveis(); renderHealthDashboard(); renderDRE();
+}
+
+/* Status efetivo da variável (Pago/Atrasado/Agendado/Pendente) */
+function statusVariavel(v){
+  if(v.status==='Pago')return 'Pago';
+  if(v.status==='Agendado')return 'Agendado';
+  return estaVencido(v)?'Atrasado':'Pendente';
+}
+/* Muda status direto (Pendente/Agendado) ou abre modal de baixa (Pago) */
+async function mudarStatusVariavel(id,novo){
+  if(novo==='Pago'){ abrirPagamentoModal(id,'variavel'); return; }
+  const v=_variaveisCache.find(x=>String(x.id)===String(id)); if(!v)return;
+  try{
+    const{error}=await financeiroService.atualizarVariavel(id,{status:novo,data_pagamento_real:null,pago_em:null});
+    if(error)throw error;
+    Object.assign(v,{status:novo,data_pagamento_real:null,pago_em:null});
+    toast('Status atualizado para "'+novo+'"',novo==='Agendado'?'warn':'ok');
+  }catch(e){ toast('Erro ao atualizar status: '+e.message,'err'); return; }
+  renderVariaveis(); renderHealthDashboard();
+}
+
+function renderVariaveis(){
+  const lbl=document.getElementById('gv-mes-form-label'); if(lbl)lbl.textContent=nomeMesFat(mesAtual,anoAtual);
+  const wrap=document.getElementById('gv-table-wrap');
+  const badge=document.getElementById('gv-total-badge');
+  const itens=_variaveisCache.filter(v=>v.mes===mesAtual&&v.ano===anoAtual);
+  const total=itens.reduce((s,v)=>s+parseFloat(v.valor||0),0);
+
+  /* Índice de Variabilidade = total variáveis / faturamento bruto do mês */
+  const receita=_allPedidosBrutos.filter(p=>mesMatch(p.data_aprovacao)).reduce((a,b)=>a+parseFloat(b.valor||0),0);
+  const idx=receita>0?total/receita*100:0;
+  const it=document.getElementById('gv-indice-total'); if(it)it.textContent=brl(total);
+  const ip=document.getElementById('gv-indice-pct'); if(ip)ip.textContent=idx.toFixed(1)+'% s/ Faturamento';
+  if(badge)badge.textContent='Total: '+brl(total);
+  if(!wrap)return;
+
+  if(!itens.length){
+    wrap.innerHTML='<div class="empty-msg">Nenhum gasto variável lançado para este mês.<br><span style="font-size:11px">Use o formulário acima para lançar custos extras (fretes, comissões, tráfego pago…).</span></div>';
+    return;
+  }
+  const labelPedido=pid=>{
+    if(!pid)return null;
+    const p=_allPedidosBrutos.find(x=>String(x.id)===String(pid));
+    return p?((p.codigo_orcamento||('#'+p.id))+' · '+(p.nome||p.razao_social||'')):('#'+pid);
+  };
+  const stMap={'Pago':'s-pago','Atrasado':'s-atrasado','Agendado':'s-agendado','Pendente':'s-pendente'};
+  let rows='';
+  for(const v of itens){
+    const pago=v.status==='Pago';
+    const st=statusVariavel(v);
+    const vencCls=(st==='Atrasado')?' vencido':(venceHoje(v)&&!pago)?' hoje':'';
+    const vencExtra=(st==='Atrasado')?' ⚠️':(venceHoje(v)&&!pago)?' • hoje':'';
+    const stSel=v.status==='Pago'?'Pago':v.status==='Agendado'?'Agendado':'Pendente';
+    const vinc=labelPedido(v.pedido_id);
+    const vincTag=vinc?`<span class="gv-vinc-tag">${esc(vinc)}</span>`:`<span class="gv-vinc-tag gv-vinc-geral">🌐 Geral</span>`;
+    const statusCell=`<select class="gf-status-sel" onchange="mudarStatusVariavel('${v.id}',this.value)" title="Alterar status">
+        <option value="Pendente"${stSel==='Pendente'?' selected':''}>○ Pendente</option>
+        <option value="Agendado"${stSel==='Agendado'?' selected':''}>📅 Agendado</option>
+        <option value="Pago"${stSel==='Pago'?' selected':''}>✓ Pago</option>
+      </select> <span class="gf-status-badge ${stMap[st]}">${st}</span>`;
+    const clip=v.comprovante_url
+      ? `<a class="gf-clip has" href="${esc(v.comprovante_url)}" target="_blank" rel="noopener" title="Ver comprovante">📎</a>`
+      : `<span class="gf-clip empty" title="Sem comprovante">📎</span>`;
+    rows+=`<tr class="${pago?'gf-row-pago':''}">
+      <td style="padding-left:14px">${esc(v.categoria||'—')}</td>
+      <td>${esc(v.descricao||'—')}</td>
+      <td>${vincTag}</td>
+      <td><span class="gf-venc-badge${vencCls}">${v.dia_vencimento?'Dia '+String(v.dia_vencimento).padStart(2,'0'):'—'}${vencExtra}</span></td>
+      <td style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:600">${brl(v.valor)}</td>
+      <td>${statusCell}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim)">${fmtDataReal(v)}</td>
+      <td><span class="gf-conta-tag">${v.forma_pagamento?esc(v.forma_pagamento):'—'}</span></td>
+      <td style="text-align:right;white-space:nowrap">${clip}<button class="btn-gf-del" onclick="removerVariavel('${v.id}')" title="Remover">✕</button></td>
+    </tr>`;
+  }
+  wrap.innerHTML=`<table class="gf-table"><thead><tr><th>Categoria</th><th>Descrição</th><th>Obra / Vínculo</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Data Real</th><th>Conta</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+/* ═══ HEALTH DASHBOARD (DRE: custos de obras = deduções OS + variáveis) ═══ */
+function renderHealthDashboard(){
+  const r = financeiroService.calcResumoMes(_allPedidosBrutos, fatMap, _gastosCache, mesAtual, anoAtual, _variaveisCache);
+  const g=id=>document.getElementById(id);
+  if(!g('hd-bruto'))return;
+  g('hd-bruto').textContent=brl(r.receita);
+  g('hd-custos').textContent=brl(r.custosObras);
+  g('hd-margem-contrib').textContent=brl(r.margem);
+  g('hd-fixos').textContent=brl(r.fixosPagos);
+  if(g('hd-fixos-pend')) g('hd-fixos-pend').textContent=brl(r.fixosPendentes);
+  const lv=g('hd-lucro-real');
+  lv.textContent=brl(r.lucroReal);
+  lv.style.color=r.lucroReal>=0?'var(--green)':'var(--red)';
+  if(g('hd-projetado')){
+    g('hd-projetado').innerHTML = r.fixosPendentes>0
+      ? `Projetado c/ provisões: <strong style="color:${r.lucroProjetado>=0?'var(--green)':'var(--red)'}">${brl(r.lucroProjetado)}</strong>`
+      : '';
+  }
+  const pct=r.receita>0?r.fixos/r.receita*100:0;
+  const res=g('health-result');
+  res.className='health-result'+(r.lucroProjetado<0?' danger':r.lucroProjetado<r.receita*0.1?' warn':'');
+  g('hd-pct-fixos').textContent=r.fixos>0?`Gastos Fixos: ${pct.toFixed(1)}% do Faturamento`:'';
+  g('health-alert').className='health-alert'+(r.receita>0&&pct>30?' show':'');
+  const hl=g('health-mes-label');
+  if(hl)hl.textContent=nomeMesFat(mesAtual,anoAtual);
+}
+
+/* ═══ PREVISÃO DE FLUXO — SAÍDAS POR SEMANA ═══ */
+let _fluxoChart=null;
+function renderFluxoSemanal(){
+  const ctx=document.getElementById('c-fluxo-semanal');
+  const lbl=document.getElementById('fluxo-mes-label');
+  if(lbl)lbl.textContent=nomeMesFat(mesAtual,anoAtual);
+  if(!ctx||typeof Chart==='undefined')return;
+  // Soma de contas NÃO pagas (provisão) por faixa semanal — cálculo no serviço
+  const buckets=financeiroService.calcFluxoSemanal(_gastosCache,mesAtual,anoAtual);
+  if(_fluxoChart){_fluxoChart.destroy();_fluxoChart=null;}
+  _fluxoChart=new Chart(ctx.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:['Sem 1\n(1–7)','Sem 2\n(8–14)','Sem 3\n(15–21)','Sem 4\n(22–28)','Sem 5\n(29–31)'],
+      datasets:[{label:'Saídas previstas',data:buckets,
+        backgroundColor:'rgba(245,197,66,0.55)',borderColor:'#f5c542',borderWidth:1,borderRadius:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.parsed.y)}}},
+      scales:{
+        y:{ticks:{callback:v=>brl(v),font:{size:10},color:'#5c6080'},grid:{color:'rgba(37,40,64,.5)'},border:{color:'var(--border)'}},
+        x:{ticks:{color:'#5c6080',font:{size:10}},grid:{display:false},border:{color:'var(--border)'}}
+      }
+    }
+  });
+}
+
+/* ═══ DRE OFICIAL — MATRIZ COMPARATIVA ANUAL (regime de competência) ═══ */
+function renderDRE(){
+  const wrap=document.getElementById('dre-table-wrap'); if(!wrap)return;
+  const anoLbl=document.getElementById('dre-ano-label'); if(anoLbl)anoLbl.textContent=anoAtual;
+  const aliq=parseFloat((document.getElementById('dre-aliquota')||{}).value)||0;
+  const MESES_FAT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Agregação pesada isolada no serviço (regime de competência)
+  const dre = financeiroService.calcDRE(_allPedidosBrutos, fatMap, _gastosCache, anoAtual, aliq, _variaveisCache);
+  const {bruto,impostos,fatLiq,custos,margem,fixos,lucro,acc}=dre;
+  const sum=a=>a.reduce((s,x)=>s+x,0);
+  const accBruto=acc.bruto;
+
+  const cell=(v,base,extra='')=>`<td class="dre-val ${extra}"><span>${brl(v)}</span><span class="dre-pct">${base>0?(v/base*100).toFixed(0)+'%':'—'}</span></td>`;
+  const linha=(label,arr,rowCls,baseArr)=>{
+    let tds='';
+    for(let m=0;m<12;m++) tds+=cell(arr[m],baseArr[m]);
+    tds+=cell(sum(arr),accBruto,'dre-acc');
+    return `<tr class="${rowCls}"><td class="dre-lbl">${label}</td>${tds}</tr>`;
+  };
+
+  let head='<tr><th class="dre-lbl">Conta — '+anoAtual+'</th>';
+  for(let m=0;m<12;m++)head+=`<th>${MESES_FAT[m]}</th>`;
+  head+='<th class="dre-acc">Acumulado</th></tr>';
+
+  const html=`<table class="dre-table"><thead>${head}</thead><tbody>
+    ${linha('(+) Faturamento Bruto',bruto,'dre-row-result',bruto)}
+    ${linha('(−) Impostos s/ Vendas ('+aliq+'%)',impostos,'dre-row-sub',bruto)}
+    ${linha('(=) Faturamento Líquido',fatLiq,'dre-row-result',bruto)}
+    ${linha('(−) Custos Diretos de Obras',custos,'dre-row-sub',bruto)}
+    ${linha('(=) Margem de Contribuição',margem,'dre-row-result',bruto)}
+    ${linha('(−) Gastos Fixos',fixos,'dre-row-sub',bruto)}
+    ${linha('(=) Lucro Líquido Operacional',lucro,'dre-row-final',bruto)}
+  </tbody></table>`;
+  wrap.innerHTML=html;
+}
+
+['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)document.getElementById(id).classList.remove('open')});
+});
+window.onload=()=>{testeFaturamento();carregar();};
+</script>
+</body>
+</html>
