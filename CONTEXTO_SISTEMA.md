@@ -50,6 +50,8 @@ js/
 - **anon key é pública** (fica no front) — isso é OK **porque** o RLS+Auth a tornam inútil sozinha. **NUNCA** usar a `service_role` key no front-end (ignora RLS).
 - **Pentest (2026-06-07):** simulado atacante com a anon key sem login → leitura negada (0 linhas), INSERT negado (401) em todas as tabelas, Storage privado e sem listagem/upload anônimo, signup off, nenhuma service_role no código. **Resultado: 0 vulnerabilidades.**
 - **Ordem segura ao apertar RLS (evitar lockout):** criar usuário → testar login → só então rodar o SQL que troca as policies para `authenticated`.
+- **Deploy:** hospedado na **Vercel** (`sistema-crm-eosin.vercel.app`). `vercel.json` na raiz envia os cabeçalhos de segurança (CSP, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy, HSTS). CSP precisa de `'unsafe-inline'` em script/style (o app usa scripts e handlers inline — abordagem híbrida). connect-src libera `*.supabase.co` (https+wss) e `viacep.com.br`; script-src libera `cdn.jsdelivr.net`; fontes do Google.
+- **Falso positivo de antivírus (Kaspersky):** alerta de "vazamento" em domínio novo = heurística por (a) anon JWT visível no JS (pública por design) e (b) campo de senha. Não é vazamento real — pentest = 0 vulnerabilidades e sem service_role exposta.
 - **Pendências de hardening (recomendado ao hospedar):** Leaked Password Protection ON, senha mínima ≥10, MFA opcional, servir só por HTTPS, definir Site URL, conferir aba Advisors→Security, backups automáticos.
 
 ### 2.4 Arquivos / Telas
