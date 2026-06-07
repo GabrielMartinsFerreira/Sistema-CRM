@@ -301,6 +301,32 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .oc-anexo-name{font-size:13px;font-weight:700;color:var(--text)}
 .oc-anexo-size{font-size:11px;color:var(--text-muted);margin-top:2px}
 .btn-open-anexo{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* ═══════════ MOBILE — repaginação responsiva ═══════════ */
+@media(max-width:640px){
+  body{padding:10px}
+  .card{padding:14px;margin-bottom:14px}
+  .section-title{font-size:14px;flex-wrap:wrap;gap:8px}
+  .view-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .view-tab{padding:10px 14px;font-size:12px;white-space:nowrap}
+  .gf-form-row,.gv-form-row{grid-template-columns:1fr!important}
+  /* tabelas roláveis na horizontal */
+  #gf-table-wrap,#gv-table-wrap,.dre-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .gf-table{min-width:720px}
+  .dre-table{min-width:780px}
+  /* modais ocupam quase a tela */
+  .modal{max-width:96vw!important;width:96vw!important}
+  .modal-footer{flex-wrap:wrap;gap:8px}
+  .modal-footer .btn{flex:1 1 auto}
+  .oc-grid{grid-template-columns:1fr!important}
+  .health-result{flex-direction:column;align-items:flex-start;gap:8px}
+  .gv-indice-card{flex-direction:column;align-items:flex-start;gap:10px}
+  .print-toggle-panel{flex-wrap:wrap}
+}
+@media(max-width:400px){
+  .view-tab{padding:9px 10px;font-size:11px}
+  .card{padding:11px}
+}
 </style>
 </head>
 <body>
@@ -556,9 +582,10 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 <div class="card" id="dre-card">
   <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
     <span>📑 DRE Oficial — Comparativo Anual <span id="dre-ano-label" style="color:var(--accent);font-family:'DM Mono',monospace;font-size:13px;text-transform:none;letter-spacing:0">—</span></span>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:none;letter-spacing:0">Impostos s/ Vendas (%)</label>
       <input type="number" id="dre-aliquota" class="form-control" value="0" min="0" max="100" step="0.5" style="width:80px;height:34px;padding:6px 8px" oninput="renderDRE()">
+      <button class="btn" style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text);height:34px;padding:0 14px;font-size:12px;font-weight:600" onclick="abrirDREModal()">🔍 Tela cheia</button>
     </div>
   </div>
   <div class="dre-wrap"><div id="dre-table-wrap"></div></div>
@@ -593,8 +620,10 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
         </select>
       </div>
       <div class="form-group">
-        <label>Comprovante (URL — opcional)</label>
-        <input type="text" id="gfp-comprovante" class="form-control" placeholder="https://… link do comprovante">
+        <label>📎 Comprovante PIX (imagem ou PDF — opcional)</label>
+        <input type="file" id="gfp-file" accept="image/*,application/pdf" class="form-control" style="padding:8px">
+        <div id="gfp-file-atual" style="font-size:11px;color:var(--green);margin-top:5px;display:none">📎 Comprovante já anexado — selecione um novo para substituir.</div>
+        <input type="text" id="gfp-comprovante" class="form-control" placeholder="…ou cole um link (opcional)" style="margin-top:6px;font-size:12px">
       </div>
     </div>
     <div class="modal-footer">
@@ -644,6 +673,22 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     <div class="modal-footer">
       <button class="btn btn-cancel-modal" onclick="fecharEditarGasto()">Cancelar</button>
       <button class="btn" style="background:var(--accent);color:#fff;font-weight:700" onclick="salvarEdicaoGasto()">💾 Salvar Edição</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DRE TELA CHEIA -->
+<div class="modal-overlay" id="dre-modal">
+  <div class="modal" style="max-width:96vw;width:96vw;max-height:94vh">
+    <div class="modal-header">
+      <div class="modal-title">📑 DRE Oficial — <span id="dre-modal-ano" style="color:var(--accent);font-family:'DM Mono',monospace"></span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" style="background:var(--purple,#8b5cf6);color:#fff;border:none;height:34px;padding:0 14px;font-size:12px;font-weight:700" onclick="imprimirDRE()">🖨️ Imprimir / PDF</button>
+        <button class="btn-modal-close" onclick="fecharDREModal()">✕</button>
+      </div>
+    </div>
+    <div style="padding:14px 18px;overflow:auto;max-height:82vh">
+      <div class="dre-wrap" style="border:none"><div id="dre-modal-wrap"></div></div>
     </div>
   </div>
 </div>
@@ -1343,7 +1388,7 @@ function abrirOsCard(leadId){
     <div class="oc-section">🔧 Dados Técnicos da Obra</div>
     <div class="oc-grid">
       <div class="oc-item"><div class="oc-label">Produto / Serviço</div><div class="oc-value">${esc(p.produto||'—')}</div></div>
-      <div class="oc-item"><div class="oc-label">Valor do Contrato</div><div class="oc-value" style="font-family:'DM Mono',monospace;color:var(--accent)">${brl(p.valor)}</div></div>
+      <div class="oc-item" id="oc-valor-contrato"><div class="oc-label">Valor do Contrato</div><div class="oc-value" style="font-family:'DM Mono',monospace;color:var(--accent)">${brl(p.valor)}</div></div>
     </div>
     <div class="oc-grid">
       <div class="oc-item"><div class="oc-label">Período da Obra</div><div class="oc-value">${esc(p.periodo_obra||'—')}</div></div>
@@ -1389,6 +1434,11 @@ function toggleOcultarBloco(blockId, btn){
     return;
   }
   const ocultar = el.classList.toggle('print-hide');
+  // Ao ocultar Pagamentos, oculta também o Valor do Contrato
+  if(blockId==='oc-pag-block'){
+    const vc=document.getElementById('oc-valor-contrato');
+    if(vc) vc.classList.toggle('print-hide', ocultar);
+  }
   btn.classList.toggle('active', ocultar);
   btn.textContent = ocultar ? '✓ ' + (icons[blockId]||blockId) : (icons[blockId]||blockId);
   btn.title = ocultar ? 'Clique para exibir novamente' : 'Clique para ocultar na impressão';
@@ -1670,7 +1720,12 @@ function abrirPagamentoModal(id, tipo='fixo'){
   document.getElementById('gfp-valor').textContent=brl(g.valor);
   document.getElementById('gfp-data').value=g.data_pagamento_real||new Date().toISOString().split('T')[0];
   document.getElementById('gfp-forma').value=g.forma_pagamento||'';
-  document.getElementById('gfp-comprovante').value=g.comprovante_url||'';
+  // limpa o arquivo; mostra URL só se for link http (caminho de upload fica oculto)
+  const fileEl=document.getElementById('gfp-file'); if(fileEl) fileEl.value='';
+  const ehLink=g.comprovante_url && /^https?:\/\//i.test(g.comprovante_url);
+  document.getElementById('gfp-comprovante').value=ehLink?g.comprovante_url:'';
+  const at=document.getElementById('gfp-file-atual');
+  if(at) at.style.display=(g.comprovante_url && !ehLink)?'block':'none';
   document.getElementById('gf-pay-modal').classList.add('open');
 }
 function fecharPagamentoModal(){ document.getElementById('gf-pay-modal').classList.remove('open'); if(_payTipo==='variavel')renderVariaveis(); else renderGastosFixos(); }
@@ -1678,11 +1733,24 @@ async function confirmarPagamento(){
   const id=document.getElementById('gfp-id').value;
   const data=document.getElementById('gfp-data').value;
   const forma=document.getElementById('gfp-forma').value;
-  const comp=document.getElementById('gfp-comprovante').value.trim()||null;
+  let comp=document.getElementById('gfp-comprovante').value.trim()||null;
   if(!data){ toast('Informe a data do pagamento','err'); return; }
   if(!forma){ toast('Selecione a conta / forma de pagamento','err'); return; }
   const btn=document.getElementById('gfp-confirm-btn'); btn.disabled=true; btn.textContent='Salvando…';
   try{
+    // Upload do comprovante (imagem/PDF) para o Storage privado, se houver arquivo
+    const fileEl=document.getElementById('gfp-file');
+    const file=fileEl&&fileEl.files&&fileEl.files[0];
+    if(file){
+      if(file.size>10*1024*1024){ throw new Error('Arquivo muito grande — máx. 10 MB'); }
+      btn.textContent='Enviando comprovante…';
+      const ext=(file.name.split('.').pop()||'bin').toLowerCase();
+      const path='comprovantes/'+_payTipo+'_'+id+'_'+Date.now()+'.'+ext;
+      const{error:upErr}=await crmService.uploadRelatorio(path,file,file.type);
+      if(upErr) throw new Error('Upload do comprovante: '+upErr.message);
+      comp=path;   // guarda o CAMINHO (signed URL gerada sob demanda)
+      btn.textContent='Salvando…';
+    }
     if(_payTipo==='variavel'){
       const v=_variaveisCache.find(x=>String(x.id)===String(id)); if(!v)throw new Error('item não encontrado');
       const upd={status:'Pago',data_pagamento_real:data,forma_pagamento:forma,comprovante_url:comp,pago_em:new Date().toISOString()};
@@ -1739,7 +1807,7 @@ function renderGastosFixos(){
           <option value="Pago"${stSel==='Pago'?' selected':''}>✓ Pago</option>
         </select> <span class="gf-status-badge ${stMap[st]}">${st}</span>`;
       const clip=g.comprovante_url
-        ? `<a class="gf-clip has" href="${esc(g.comprovante_url)}" target="_blank" rel="noopener" title="Ver comprovante">📎</a>`
+        ? `<button class="gf-clip has" onclick="abrirAnexoTecnico('${esc(g.comprovante_url)}')" title="Ver comprovante">📎</button>`
         : `<span class="gf-clip empty" title="Sem comprovante">📎</span>`;
       rows+=`<tr class="${pago?'gf-row-pago':''}">
         <td style="padding-left:20px">${esc(g.nome)}</td>
@@ -1894,7 +1962,7 @@ function renderVariaveis(){
         <option value="Pago"${stSel==='Pago'?' selected':''}>✓ Pago</option>
       </select> <span class="gf-status-badge ${stMap[st]}">${st}</span>`;
     const clip=v.comprovante_url
-      ? `<a class="gf-clip has" href="${esc(v.comprovante_url)}" target="_blank" rel="noopener" title="Ver comprovante">📎</a>`
+      ? `<button class="gf-clip has" onclick="abrirAnexoTecnico('${esc(v.comprovante_url)}')" title="Ver comprovante">📎</button>`
       : `<span class="gf-clip empty" title="Sem comprovante">📎</span>`;
     rows+=`<tr class="${pago?'gf-row-pago':''}">
       <td style="padding-left:14px">${esc(v.categoria||'—')}</td>
@@ -2000,9 +2068,45 @@ function renderDRE(){
     ${linha('(=) Lucro Líquido Operacional',lucro,'dre-row-final',bruto)}
   </tbody></table>`;
   wrap.innerHTML=html;
+  _dreHtml=html;   // reaproveitado no modal/impressão
+  // Se o modal estiver aberto, sincroniza
+  const mw=document.getElementById('dre-modal-wrap');
+  if(mw && document.getElementById('dre-modal').classList.contains('open')) mw.innerHTML=html;
 }
 
-['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal'].forEach(id=>{
+let _dreHtml='';
+function abrirDREModal(){
+  renderDRE();
+  document.getElementById('dre-modal-ano').textContent=anoAtual;
+  document.getElementById('dre-modal-wrap').innerHTML=_dreHtml||'<div class="empty-msg">Sem dados.</div>';
+  document.getElementById('dre-modal').classList.add('open');
+}
+function fecharDREModal(){ document.getElementById('dre-modal').classList.remove('open'); }
+function imprimirDRE(){
+  const win=window.open('','_blank');
+  if(!win){ toast('Pop-up bloqueado — permita pop-ups para imprimir','err'); return; }
+  win.document.write(`<html><head><meta charset="utf-8"><title>DRE ${anoAtual} — Conceito Vidros & Projetos</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}
+      h1{font-size:18px;margin:0 0 2px} .sub{color:#666;font-size:12px;margin-bottom:16px}
+      table{border-collapse:collapse;width:100%;font-size:11px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;white-space:nowrap}
+      th:first-child,td:first-child{text-align:left}
+      thead th{background:#f0f0f0;font-size:10px;text-transform:uppercase}
+      .dre-pct{display:block;font-size:8px;color:#888}
+      .dre-row-final td{font-weight:800;background:#eafaf2;border-top:2px solid #333}
+      .dre-row-result td{font-weight:700;background:#fafafa}
+      @media print{@page{size:A4 landscape;margin:10mm}}
+    </style></head><body>
+    <h1>Conceito Vidros &amp; Projetos</h1>
+    <div class="sub">DRE Oficial — Comparativo Anual ${anoAtual} · gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+    ${_dreHtml}
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal','dre-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)document.getElementById(id).classList.remove('open')});
 });
 window.onload=()=>{testeFaturamento();carregar();};

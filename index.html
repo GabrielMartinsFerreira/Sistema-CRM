@@ -380,6 +380,7 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
 .fl-actions{display:flex;gap:10px;flex-wrap:wrap;padding:12px 0 4px 0}
 .btn-whatsapp{background:#25d366;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none!important}
 .btn-maps{background:#4285f4;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none!important}
+.btn-waze{background:#33ccff;color:#062a33;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none!important}
 .fl-seq-badge{display:inline-block;background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:800;letter-spacing:.4px;margin-bottom:8px}
 .btn-marcar-concluida{background:var(--green);color:#0c0e16;border:none;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-top:8px;letter-spacing:.3px}
 .btn-marcar-concluida:disabled{opacity:.45;cursor:default}
@@ -437,6 +438,30 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
 .wiz-review-line:last-child{border-bottom:none;padding-bottom:0}
 .wiz-review-label{color:var(--text-muted);flex-shrink:0;margin-right:10px}
 .wiz-review-val{color:var(--text);font-weight:600;text-align:right;word-break:break-word}
+
+/* ═══════════ MOBILE — repaginação responsiva ═══════════ */
+@media(max-width:640px){
+  body{padding:10px}
+  .container{max-width:100%}
+  .header-actions{width:100%;justify-content:flex-start}
+  .form-row{grid-template-columns:1fr!important}
+  .charts-grid{grid-template-columns:1fr!important}
+  /* pipeline e demais tabelas roláveis na horizontal */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-wrap table{min-width:760px}
+  /* modais ocupam quase a tela */
+  .modal{max-width:96vw!important;width:96vw!important}
+  .modal-footer{flex-wrap:wrap;gap:8px}
+  /* botões de rota da ficha de visita empilham */
+  .fl-actions{flex-direction:column}
+  .fl-actions a{justify-content:center}
+  /* abas de vendedor roláveis */
+  .pipeline-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .cal-view-toggle{flex-wrap:wrap}
+}
+@media(max-width:400px){
+  body{padding:8px}
+}
 </style>
 </head>
 <body>
@@ -821,6 +846,7 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
   <div class="fl-actions">
     <a id="fl-whatsapp-btn" href="#" target="_blank" class="btn-whatsapp">📱 WhatsApp</a>
     <a id="fl-maps-btn" href="#" target="_blank" class="btn-maps">🗺️ Google Maps</a>
+    <a id="fl-waze-btn" href="#" target="_blank" class="btn-waze">🚗 Waze</a>
   </div>
   <button class="btn-marcar-concluida" id="fl-btn-concluida" onclick="concluirVisitaCal()">✓ Marcar como Concluída</button>
 </div>
@@ -2429,14 +2455,21 @@ function abrirFichaLogistica(leadId){
     wLink.style.display = 'none';
   }
 
-  /* Botão Google Maps */
+  /* Botões Google Maps + Waze */
   const mLink = document.getElementById('fl-maps-btn');
+  const wzLink = document.getElementById('fl-waze-btn');
   if(partes.length){
-    const query    = encodeURIComponent(partes.join(', ') + ', Brasil');
+    const endStr = partes.join(', ') + ', Brasil';
+    const query  = encodeURIComponent(endStr);
     mLink.href          = `https://www.google.com/maps/search/?api=1&query=${query}`;
     mLink.style.display = 'flex';
+    if(wzLink){
+      wzLink.href          = `https://www.waze.com/ul?q=${query}&navigate=yes`;
+      wzLink.style.display = 'flex';
+    }
   } else {
     mLink.style.display = 'none';
+    if(wzLink) wzLink.style.display = 'none';
   }
 
   /* Botão Concluir */

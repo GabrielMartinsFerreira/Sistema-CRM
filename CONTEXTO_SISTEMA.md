@@ -55,10 +55,13 @@ js/
 - **Pendências de hardening (recomendado ao hospedar):** Leaked Password Protection ON, senha mínima ≥10, MFA opcional, servir só por HTTPS, definir Site URL, conferir aba Advisors→Security, backups automáticos.
 
 ### 2.4 Arquivos / Telas
-- **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico).
+- **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível; ficha da visita com **WhatsApp + Google Maps + Waze** `https://www.waze.com/ul?q=...&navigate=yes`), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico).
+- **Responsividade:** os 3 HTML têm bloco `@media(max-width:640px)` (+400px) — body padding reduzido, abas/tabelas roláveis na horizontal, grids/forms em 1 coluna, modais 96vw, ficha de visita empilha botões. Mobile e desktop no mesmo arquivo (sem app separado).
 - **`faturamento.html`** — Núcleo financeiro com 3 abas no topo: **📊 Visão Obras** (custos/margem/lucro por pedido), **🏢 Gastos Fixos** (contas a pagar recorrentes) e **📉 Gastos Variáveis**. Inclui Health Dashboard, DRE comparativa e gráfico de fluxo de caixa semanal.
   - **Recorrência por série (`serie_id`):** gasto fixo com "Replicar" gera a série do mês atual até dezembro (mesma `serie_id`); continua no virar do ano (`garantirSeriesDoAno`). **Editar/Excluir** abre diálogo de escopo: *Apenas este mês / Este e os próximos / Todos* (operações em massa **preservam meses já PAGOS**).
-  - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal capturando **Data de Pagamento Real + Conta/Forma (Itaú/Nubank/Cartão Corporativo/Caixa Interno) + Comprovante (URL)**.
+  - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal capturando **Data de Pagamento Real + Conta/Forma (Itaú/Nubank/Cartão Corporativo/Caixa Interno) + Comprovante**. O comprovante pode ser **upload de imagem/PDF do PIX** (vai p/ bucket privado `relatorios-tecnicos` prefixo `comprovantes/`, guarda o caminho; abre via signed URL com `abrirAnexoTecnico()`) ou um link colado.
+  - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
+  - **Ficha OS:** o toggle "💳 Pagamentos" agora oculta também o **Valor do Contrato** (`#oc-valor-contrato`) na impressão.
 - **`relatorios.html`** — Relatórios mensais (Chart.js): funil, vendedores, rankings, e o gráfico de **Breakeven** (receita × custos × gastos × lucro).
 
 ### 2.5 Módulo de Gastos Fixos (estrutura validada)
