@@ -141,5 +141,3 @@ Colunas adicionadas: `dia_vencimento` (1–31), `status_pagamento`, `data_pagame
 - **Processo:** planejar antes de executar; aplicar em etapas; **validar** (sintaxe, balanceamento de tags, teste de banco quando possível) e entregar um **resumo conciso em tabela** ao final.
 - **Decisões de arquitetura que impactam risco** devem ser apresentadas a mim para eu escolher (ex.: ES Modules vs scripts clássicos), com recomendação fundamentada.
 - **Manutenção deste arquivo:** **sempre atualizar este `CONTEXTO_SISTEMA.md` a cada evolução do sistema** (novas tabelas, colunas, telas, regras de negócio).
-
-test
