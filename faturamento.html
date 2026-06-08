@@ -343,6 +343,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
   <div class="header-actions">
     <a href="index.html" class="btn-nav">← Voltar ao CRM</a>
+    <a href="pedidos.html" class="btn-nav">📦 Pedidos</a>
     <a href="relatorios.html" class="btn-nav btn-nav-accent">📈 Relatórios</a>
   </div>
 </header>
@@ -383,6 +384,11 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     <div class="kpi-label">Alerta Margem &lt; 20%</div>
     <div class="kpi-value" id="k-alerta" style="color:var(--red)">—</div>
     <div class="kpi-sub">pedidos abaixo do limiar</div>
+  </div>
+  <div class="kpi-card" style="border-left-color:var(--blue)">
+    <div class="kpi-label">Valor Real Recebido</div>
+    <div class="kpi-value" id="k-real" style="color:var(--blue)">—</div>
+    <div class="kpi-sub" id="k-real-sub">entradas confirmadas</div>
   </div>
 </div>
 
@@ -890,6 +896,7 @@ function renderPorMes(){
 let _allPedidosBrutos = [];   // todos os pedidos do Supabase (sem filtro de mês)
 let allPedidos=[];
 let fatMap={};   // lead_id → faturamento record
+let _allMovsFat=[];          // financeiro_movimentacoes (para Valor Real)
 let _auditChart=null;
 
 /* Deduções detalhadas — delega ao financeiroService (lógica centralizada) */
@@ -898,15 +905,17 @@ function fatCustos(f){ return financeiroService.deducoesDetalhadas(f); }
 async function carregar(){
   if(!(await authGate())) return;        // bloqueia sem sessão (mostra login)
   try{
-    const[{data:leads,error:e1},{data:fat,error:e2}]=await Promise.all([
+    const[{data:leads,error:e1},{data:fat,error:e2},{data:movs,error:e3}]=await Promise.all([
       financeiroService.carregarPedidos(),
-      financeiroService.carregarFaturamento()
+      financeiroService.carregarFaturamento(),
+      financeiroService.carregarMovimentacoes()
     ]);
     if(e1)throw e1;
     if(e2)throw e2;
     _allPedidosBrutos=leads||[];
     fatMap={};
     (fat||[]).forEach(f=>{fatMap[f.lead_id]=f});
+    _allMovsFat=movs||[];
     await loadGastosFixosDB();
     await loadVariaveisDB();
     await garantirSeriesDoAno(anoAtual);
@@ -946,6 +955,13 @@ function renderKPIs(){
   document.getElementById('k-margem').textContent=margemMedia!==null?margemMedia.toFixed(1)+'%':'—';
   document.getElementById('k-margem-sub').textContent=margens.length?`${margens.length} pedido${margens.length!==1?'s':''} analisado${margens.length!==1?'s':''}`:'sem dados';
   document.getElementById('k-alerta').textContent=alertas;
+
+  // Valor Real: soma das Entradas de movimentacoes para os pedidos do mês
+  const pedidoIds=allPedidos.map(p=>p.id);
+  const valorReal=financeiroService.calcValorReal(_allMovsFat, pedidoIds);
+  document.getElementById('k-real').textContent=brl(valorReal);
+  const pctReal=brutoTotal>0?(valorReal/brutoTotal*100).toFixed(1)+'%':'—';
+  document.getElementById('k-real-sub').textContent=`${pctReal} do bruto recebido`;
 }
 
 function margemPill(pct){

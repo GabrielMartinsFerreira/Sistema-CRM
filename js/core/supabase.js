@@ -14,11 +14,12 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const TABLES = {
-  LEADS:       'leads',
-  FATURAMENTO: 'faturamento',
-  CLIENTES:    'crm_clientes',
-  GASTOS:      'gastos_fixos',
-  VARIAVEIS:   'crm_gastos_variaveis'
+  LEADS:          'leads',
+  FATURAMENTO:    'faturamento',
+  CLIENTES:       'crm_clientes',
+  GASTOS:         'gastos_fixos',
+  VARIAVEIS:      'crm_gastos_variaveis',
+  MOVIMENTACOES:  'financeiro_movimentacoes'
 };
 const STORAGE_BUCKET = 'relatorios-tecnicos';
 

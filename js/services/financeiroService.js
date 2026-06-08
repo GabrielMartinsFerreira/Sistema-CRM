@@ -32,6 +32,35 @@ const financeiroService = {
   atualizarVariavel(id, upd){ return db.from(TABLES.VARIAVEIS).update(upd).eq('id', id); },
   deletarVariavel(id){ return db.from(TABLES.VARIAVEIS).delete().eq('id', id); },
 
+  /* ─────────── MOVIMENTAÇÕES FINANCEIRAS REAIS ─────────── */
+  carregarMovimentacoes(){
+    return db.from(TABLES.MOVIMENTACOES).select('*').order('data_movimentacao',{ascending:false});
+  },
+  carregarMovimentacoesPorLead(leadId){
+    return db.from(TABLES.MOVIMENTACOES).select('*').eq('lead_id',leadId).order('data_movimentacao',{ascending:false});
+  },
+  inserirMovimentacao(dados){
+    return db.from(TABLES.MOVIMENTACOES).insert([dados]).select().single();
+  },
+  atualizarMovimentacao(id, upd){
+    return db.from(TABLES.MOVIMENTACOES).update(upd).eq('id',id);
+  },
+  deletarMovimentacao(id){
+    return db.from(TABLES.MOVIMENTACOES).delete().eq('id',id);
+  },
+  /* Soma de Entradas para um array de lead_ids (pode ser Set ou Array) */
+  calcValorReal(movimentacoes, leadIds){
+    const ids = new Set(leadIds);
+    return (movimentacoes||[]).filter(m=>m.tipo==='Entrada' && ids.has(m.lead_id))
+      .reduce((s,m)=>s+parseFloat(m.valor||0), 0);
+  },
+  /* Soma de Saídas para um array de lead_ids */
+  calcSaidas(movimentacoes, leadIds){
+    const ids = new Set(leadIds);
+    return (movimentacoes||[]).filter(m=>m.tipo==='Saída' && ids.has(m.lead_id))
+      .reduce((s,m)=>s+parseFloat(m.valor||0), 0);
+  },
+
   /* ───────────── PURE MATH ───────────── */
   /* Um gasto está pago? (status_pagamento é a fonte; fallback no booleano antigo) */
   ehPago(g){ return (g.status_pagamento || (g.pago?'Pago':'Pendente')) === 'Pago'; },

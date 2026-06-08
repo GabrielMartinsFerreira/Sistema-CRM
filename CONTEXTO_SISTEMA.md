@@ -1,6 +1,6 @@
 # 🧠 ARQUIVO DE CONTEXTO DEFINITIVO — GG TECH CRM (Conceito Vidros & Projetos)
 > System Prompt / Context File para uso em futuras conversas com IAs.
-> Última atualização: 2026-06-07 (camada de segurança RLS + Auth) · Mantido vivo a cada evolução do sistema.
+> Última atualização: 2026-06-08 (nova página Controle de Pedidos + Fluxo Financeiro) · Mantido vivo a cada evolução do sistema.
 
 ---
 
@@ -27,7 +27,7 @@ Scripts clássicos `<script src>` que populam globais com namespace (sem `type="
 js/
 ├── core/
 │   ├── utils.js        # esc, brl, fmtDate, badgeClass, num, toast (+ window.Utils)
-│   ├── supabase.js     # db, TABLES{LEADS,FATURAMENTO,CLIENTES,GASTOS,VARIAVEIS}, STORAGE_BUCKET
+│   ├── supabase.js     # db, TABLES{LEADS,FATURAMENTO,CLIENTES,GASTOS,VARIAVEIS,MOVIMENTACOES}, STORAGE_BUCKET
 │   └── auth.js         # Supabase Auth: tela de login + window.authGate() + botão Sair
 ├── services/
 │   ├── crmService.js          # TODAS as queries de leads/clientes/storage
@@ -39,9 +39,10 @@ js/
 **Regra de ouro:** scripts clássicos compartilham escopo global; nunca redeclarar `db`/`const` do core dentro do inline (causa SyntaxError). Nenhuma chamada `db.from`/`createClient` deve existir nos HTML — tudo passa pelos serviços.
 
 ### 2.3 Banco de dados (Supabase)
-- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`.
+- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, **`financeiro_movimentacoes`** (nova).
 - **Storage:** bucket **PRIVADO** `relatorios-tecnicos` (relatórios contêm PII → LGPD). A coluna `leads.relatorio_tecnico_url` guarda o **caminho**, não a URL; a leitura usa `createSignedUrl(path, 3600)` (URL temporária de 1h).
 - **Migração histórica:** `localStorage` foi 100% removido → tudo persiste no Supabase. Parcelas do wizard ficam em `leads.parcelas` (JSONB).
+- **Novos campos em `leads`:** `status_os` (TEXT, default 'Em andamento') e `motivo_congelamento` (TEXT).
 
 ### 2.3.1 🔐 SEGURANÇA (RLS + Auth — validado por pentest)
 - **Login obrigatório (Supabase Auth, e-mail/senha).** `js/core/auth.js` faz o gate: cada loader de página chama `await authGate()` antes de buscar dados. Sem sessão → mostra tela de login e **não carrega nada**.
@@ -62,6 +63,11 @@ js/
   - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal capturando **Data de Pagamento Real + Conta/Forma (Itaú/Nubank/Cartão Corporativo/Caixa Interno) + Comprovante**. O comprovante pode ser **upload de imagem/PDF do PIX** (vai p/ bucket privado `relatorios-tecnicos` prefixo `comprovantes/`, guarda o caminho; abre via signed URL com `abrirAnexoTecnico()`) ou um link colado.
   - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
   - **Ficha OS:** o toggle "💳 Pagamentos" agora oculta também o **Valor do Contrato** (`#oc-valor-contrato`) na impressão.
+- **`pedidos.html`** *(nova, 2026-06-08)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). Três ações por linha:
+  - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas, saldo) e "Editar" (nome, produto, valor, datas, vendedor, observações).
+  - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
+  - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
+  - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (soma das Entradas em `financeiro_movimentacoes`) com barra de progresso, A Receber.
 - **`relatorios.html`** — Relatórios mensais (Chart.js): funil, vendedores, rankings, e o gráfico de **Breakeven** (receita × custos × gastos × lucro).
 
 ### 2.5 Módulo de Gastos Fixos (estrutura validada)
@@ -97,6 +103,13 @@ Colunas adicionadas: `dia_vencimento` (1–31), `status_pagamento`, `data_pagame
 - **Indicador de Provisão:** soma de tudo que está Pendente/Agendado/Atrasado no mês.
 - **Alertas nativos:** ao carregar, dispara `toast('⚠️ Atenção: Você tem X contas vencidas ou vencendo hoje!', 'warn')`; também avisa as que vencem nos próximos 3 dias.
 - **Visão de linha do tempo (fluxo de caixa):** gráfico de barras Chart.js **“Previsão de Saídas por Semana”** agrupando vencimentos não pagos em Sem 1 (1–7), Sem 2 (8–14), Sem 3 (15–21), Sem 4 (22–28), Sem 5 (29–31).
+
+### 3.4 Tabela `financeiro_movimentacoes` (nova)
+Rastreia recebimentos e saídas **reais** vinculados a cada pedido:
+- **Colunas:** `id`, `lead_id` (FK→leads ON DELETE CASCADE), `descricao`, `tipo` ('Entrada'|'Saída'), `valor` NUMERIC(12,2), `data_movimentacao` DATE, `parcela_ref` (referência ao `condicao` da parcela JSONB), `forma_pagamento`, `comprovante_url` (caminho no bucket privado), `observacao`, `created_at`.
+- **RLS:** `FOR ALL TO authenticated USING(true) WITH CHECK(true)`. Índice em `lead_id`.
+- **Métodos em `financeiroService`:** `carregarMovimentacoes`, `carregarMovimentacoesPorLead`, `inserirMovimentacao`, `atualizarMovimentacao`, `deletarMovimentacao`, `calcValorReal(movs, leadIds)`, `calcSaidas(movs, leadIds)`.
+- **Valor Real no `faturamento.html`:** 5º KPI card **"Valor Real Recebido"** = soma das Entradas para os pedidos do mês (carregado em `_allMovsFat` junto com os outros dados no `Promise.all`).
 
 ### 3.3 DRE — Demonstração do Resultado do Exercício (comparativa)
 - **Formato:** matriz **linhas (contas) × colunas (12 meses + Acumulado do Ano)**, com **scroll horizontal** e 1ª coluna fixa. **Regime de competência**.
