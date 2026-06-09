@@ -954,8 +954,17 @@ async function carregar(){
     _allPedidosBrutos=leads||[];
     fatMap={};
     (fat||[]).forEach(f=>{fatMap[f.lead_id]=f});
-    _allMovsFat=movs||[];
-    _categoriasCache=cats||[];
+    if(e3){ console.warn('[Movimentações] indisponível:',e3.message); _allMovsFat=[]; }
+    else  { _allMovsFat=movs||[]; }
+    if(e4){
+      console.warn('[Categorias] crm_categorias não encontrada:',e4.message);
+      _categoriasCache=[];
+      _catMigrationPendente=true;
+      toast('⚠ Migration pendente: rode 2026-06-08_categorias_dre.sql no Supabase SQL Editor para ativar categorias dinâmicas','warn');
+    } else {
+      _categoriasCache=cats||[];
+      _catMigrationPendente=false;
+    }
     popularCatVariavel();
     await loadGastosFixosDB();
     await loadVariaveisDB();
@@ -1560,6 +1569,7 @@ const GF_SUGESTOES_FALLBACK={
 const GF_CAT_CLASS={'Infraestrutura':'bc-infra','Pessoal':'bc-pessoal','Serviços':'bc-servicos','Marketing/Financeiro':'bc-marketing'};
 
 let _categoriasCache=[];
+let _catMigrationPendente=false;
 let _mcTabAtual='fixo';
 
 function loadGastosFixos(){return _gastosCache;}
@@ -1612,7 +1622,16 @@ function renderListaCategorias(){
   const wrap=document.getElementById('mc-lista');
   if(!wrap)return;
   const items=_categoriasCache.filter(c=>c.tipo===_mcTabAtual);
-  if(!items.length){wrap.innerHTML='<div class="empty-msg" style="padding:20px">Nenhuma categoria cadastrada.</div>';return;}
+  if(!items.length){
+    wrap.innerHTML=_catMigrationPendente
+      ? '<div style="padding:16px 20px;background:#2a1f00;border:1px solid #f59e0b;border-radius:8px;color:#fbbf24;font-size:13px;line-height:1.6">'
+        + '<strong>⚠ Tabela não encontrada no banco de dados</strong><br>'
+        + 'Execute a migration abaixo no <strong>Supabase Dashboard → SQL Editor</strong>:<br>'
+        + '<code style="display:inline-block;margin-top:6px;background:#1a1200;padding:4px 8px;border-radius:4px;font-size:12px">2026-06-08_categorias_dre.sql</code>'
+        + '</div>'
+      : '<div class="empty-msg" style="padding:20px">Nenhuma categoria cadastrada.</div>';
+    return;
+  }
   const grupoIcon={'Infraestrutura':'🏢','Pessoal':'👥','Serviços':'⚙️','Marketing/Financeiro':'📣'};
   wrap.innerHTML=items.map(c=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(37,40,64,.5)">
