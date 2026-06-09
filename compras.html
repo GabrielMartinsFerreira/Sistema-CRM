@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compras & Fornecedores — GG TECH CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e16;--bg-card:#13151f;--bg-card2:#191c28;--bg-input:#1e2132;
+  --border:#252840;--border-hover:#363a5a;--text:#dde1f0;--text-muted:#5c6080;--text-dim:#8890b0;
+  --accent:#5b6ef5;--accent-glow:rgba(91,110,245,0.18);
+  --green:#22d48f;--green-dim:rgba(34,212,143,0.12);
+  --yellow:#f5c542;--yellow-dim:rgba(245,197,66,0.12);
+  --red:#f0516a;--red-dim:rgba(240,81,106,0.12);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.12);
+  --radius:14px;--radius-sm:8px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px;max-width:1400px;margin:0 auto}
+a{color:inherit;text-decoration:none}
+
+/* OVERLAY */
+#overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.logo-wrap{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--orange-dim);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(251,146,60,0.35)}
+.logo-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.logo-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-nav{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-nav-accent{background:linear-gradient(135deg,var(--orange),#e55);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(251,146,60,0.3)}
+.btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(251,146,60,0.45)}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s}
+.kpi-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px 0 0 2px}
+.kc-obras::before{background:var(--purple)}
+.kc-despesas::before{background:var(--orange)}
+.kc-pago::before{background:var(--green)}
+.kc-pendente::before{background:var(--yellow)}
+.kc-atrasado::before{background:var(--red)}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.kpi-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-0.8px}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* CARD / SECTION */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* FILTER */
+.filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:4px}
+.filter-group{display:flex;flex-direction:column;gap:5px;min-width:140px;flex:1}
+.filter-group label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.filter-input,.filter-select{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;outline:none;transition:border-color .15s}
+.filter-input:focus,.filter-select:focus{border-color:var(--accent)}
+.btn-clear-filter{padding:9px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;align-self:flex-end}
+.btn-clear-filter:hover{border-color:var(--red);color:var(--red)}
+.result-count{font-size:12px;color:var(--text-muted);padding-top:12px}
+
+/* ═══════════════════════════════
+   ACCORDION OS (bloco pai)
+═══════════════════════════════ */
+.os-accordion{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;transition:border-color .2s}
+.os-accordion:hover{border-color:var(--border-hover)}
+.os-accordion.has-atrasado{border-color:rgba(240,81,106,.4)}
+
+.os-header{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none;background:var(--bg-card);transition:background .15s}
+.os-header:hover{background:var(--bg-card2)}
+.os-chevron{font-size:12px;color:var(--text-muted);transition:transform .25s;flex-shrink:0}
+.os-accordion.open .os-chevron{transform:rotate(90deg)}
+
+.os-meta{flex:1;min-width:0}
+.os-cod{font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:600}
+.os-nome{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.os-produto{font-size:11px;color:var(--text-muted);margin-top:1px}
+
+.os-financeiro{display:flex;gap:20px;flex-shrink:0;align-items:center;flex-wrap:wrap}
+.os-fin-item{text-align:right}
+.os-fin-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.os-fin-val{font-size:13px;font-weight:700;font-family:'DM Mono',monospace}
+
+.os-body{display:none;padding:0 20px 20px;background:var(--bg-card)}
+.os-accordion.open .os-body{display:block}
+
+/* OS Status badge */
+.os-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.os-andamento{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(56,189,248,.3)}
+.os-aguardando{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.os-congelada{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)}
+.os-concluida{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,.3)}
+
+/* Progress bar da OS */
+.os-progress-wrap{margin:14px 0 18px;background:var(--border);border-radius:4px;height:6px;overflow:hidden}
+.os-progress-bar{height:100%;border-radius:4px;transition:width .4s}
+
+/* ═══════════════════════════════
+   ACCORDION FORNECEDOR (bloco filho)
+═══════════════════════════════ */
+.forn-list{display:flex;flex-direction:column;gap:10px}
+.forn-accordion{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card2)}
+.forn-accordion.has-atrasado{border-color:rgba(240,81,106,.4)}
+
+.forn-header{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s}
+.forn-header:hover{background:rgba(255,255,255,.03)}
+.forn-chevron{font-size:11px;color:var(--text-muted);transition:transform .2s;flex-shrink:0}
+.forn-accordion.open .forn-chevron{transform:rotate(90deg)}
+
+.forn-nome{font-size:13px;font-weight:700;flex:1}
+.forn-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.forn-total{font-size:12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--orange)}
+.forn-pago-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,.3)}
+.forn-pend-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.forn-atr-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)}
+.btn-forn-edit{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:3px 7px;border-radius:4px;transition:all .15s}
+.btn-forn-edit:hover{color:var(--accent);background:var(--accent-glow)}
+.btn-forn-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:3px 7px;border-radius:4px;transition:all .15s}
+.btn-forn-del:hover{color:var(--red);background:var(--red-dim)}
+
+.forn-body{display:none;padding:0 16px 16px}
+.forn-accordion.open .forn-body{display:block}
+
+/* ═══════════════════════════════
+   TABELA DE BOLETOS
+═══════════════════════════════ */
+.boletos-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+.boletos-table th{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.boletos-table td{padding:9px 10px;border-bottom:1px solid rgba(37,40,64,.5);vertical-align:middle}
+.boletos-table tr:last-child td{border-bottom:none}
+.boletos-table tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Status badges de boleto */
+.st-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.st-pago{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,.3)}
+.st-pendente{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.st-atrasado{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)}
+
+/* Action buttons */
+.btn-act{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap}
+.btn-pagar{background:var(--green-dim);border-color:rgba(34,212,143,.35);color:var(--green)}
+.btn-pagar:hover{background:var(--green);color:#0c0e16;border-color:var(--green)}
+.btn-editar{background:var(--accent-glow);border-color:rgba(91,110,245,.35);color:var(--accent)}
+.btn-editar:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-del{background:var(--red-dim);border-color:rgba(240,81,106,.3);color:var(--red)}
+.btn-del:hover{background:var(--red);color:white;border-color:var(--red)}
+.gf-clip{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px;text-decoration:none;display:inline-block;transition:opacity .15s}
+.gf-clip.has{color:var(--accent)}.gf-clip.empty{opacity:.25;cursor:default}
+
+.btn-add-boleto{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:6px}
+.btn-add-boleto:hover{border-color:var(--orange);color:var(--orange)}
+
+.btn-add-forn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--orange-dim);border:1px solid rgba(251,146,60,.35);border-radius:var(--radius-sm);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:14px}
+.btn-add-forn:hover{background:var(--orange);color:#13151f;border-color:var(--orange)}
+
+/* EMPTY / LOADING */
+.empty-msg{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;line-height:1.7}
+.empty-forn{padding:14px;text-align:center;font-size:12px;color:var(--text-muted)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(8,9,16,.82);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto}
+.modal-lg{max-width:700px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.modal-title::before{content:'';display:block;width:3px;height:18px;background:var(--orange);border-radius:2px}
+.btn-modal-close{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;transition:color .15s}
+.btn-modal-close:hover{color:var(--text)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.btn{padding:9px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-cancel-modal{background:var(--bg-card2);border:1px solid var(--border);color:var(--text-dim)}
+.btn-cancel-modal:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-save{background:var(--green);color:#0c0e16}
+.btn-save:hover{filter:brightness(1.1)}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--orange);color:#13151f}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+
+/* FORM */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.form-control{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
+.form-control:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;pointer-events:none;transition:opacity .3s;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:340px;line-height:1.4;opacity:0}
+#toast.show{opacity:1}
+#toast.ok{background:rgba(34,212,143,.15);color:var(--green);border:1px solid rgba(34,212,143,.35)}
+#toast.err{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.4)}
+#toast.warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.45)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  body{padding:12px}
+  .os-financeiro{display:none}
+  .forn-badges{gap:5px}
+  .boletos-table{min-width:600px}
+  .boletos-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .form-row,.form-row-3{grid-template-columns:1fr}
+  .modal{max-width:96vw!important;width:96vw!important}
+}
+</style>
+</head>
+<body>
+
+<div id="overlay"><div class="spinner"></div></div>
+<div id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🛒</div>
+    <div>
+      <div class="logo-title">Compras & Fornecedores</div>
+      <div class="logo-sub">Controle de pagamentos por Obra/OS</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <a href="index.html"      class="btn-nav">📋 Leads</a>
+    <a href="pedidos.html"    class="btn-nav">📦 Pedidos</a>
+    <a href="faturamento.html" class="btn-nav">📊 Financeiro</a>
+    <a href="relatorios.html" class="btn-nav">📈 Relatórios</a>
+  </div>
+</header>
+
+<!-- KPI ROW -->
+<div class="kpi-row">
+  <div class="kpi-card kc-obras">
+    <div class="kpi-label">Obras com Compras</div>
+    <div class="kpi-value" id="k-obras" style="color:var(--purple)">—</div>
+    <div class="kpi-sub" id="k-obras-sub">OSes com fornecedores</div>
+  </div>
+  <div class="kpi-card kc-despesas">
+    <div class="kpi-label">Total de Despesas</div>
+    <div class="kpi-value" id="k-desp" style="color:var(--orange)">—</div>
+    <div class="kpi-sub">soma de todos os boletos</div>
+  </div>
+  <div class="kpi-card kc-pago">
+    <div class="kpi-label">Total Pago</div>
+    <div class="kpi-value" id="k-pago" style="color:var(--green)">—</div>
+    <div class="kpi-sub" id="k-pago-pct">—</div>
+  </div>
+  <div class="kpi-card kc-pendente">
+    <div class="kpi-label">Pendente</div>
+    <div class="kpi-value" id="k-pend" style="color:var(--yellow)">—</div>
+    <div class="kpi-sub">em aberto</div>
+  </div>
+  <div class="kpi-card kc-atrasado">
+    <div class="kpi-label">Atrasado</div>
+    <div class="kpi-value" id="k-atr" style="color:var(--red)">—</div>
+    <div class="kpi-sub">vencidos não pagos</div>
+  </div>
+</div>
+
+<!-- FILTER -->
+<div class="card">
+  <div class="filter-bar">
+    <div class="filter-group" style="flex:2;min-width:200px">
+      <label>Buscar OS / Cliente</label>
+      <input type="text" id="f-busca" class="filter-input" placeholder="Código, cliente, produto…" oninput="debouncedFiltro()">
+    </div>
+    <div class="filter-group">
+      <label>Status OS</label>
+      <select id="f-status" class="filter-select" onchange="renderTudo()">
+        <option value="">Todos</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Aguardando">Aguardando</option>
+        <option value="Congelada">Congelada</option>
+        <option value="Concluida">Concluída</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Pendências</label>
+      <select id="f-pend" class="filter-select" onchange="renderTudo()">
+        <option value="">Todas</option>
+        <option value="atrasado">Com atrasados</option>
+        <option value="pendente">Com pendentes</option>
+        <option value="quitado">Totalmente quitadas</option>
+      </select>
+    </div>
+    <button class="btn-clear-filter" onclick="limparFiltros()">✕ Limpar</button>
+  </div>
+  <div class="result-count" id="result-count"></div>
+</div>
+
+<!-- LISTA DE OS -->
+<div id="lista-os"><div class="empty-msg">Carregando obras…</div></div>
+
+
+<!-- ════════════════════════════════════════════
+     MODAL 1 — Adicionar / Editar Fornecedor
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-forn">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="mf-title">Adicionar Fornecedor</div>
+      <button class="btn-modal-close" onclick="fecharModalForn()">✕</button>
+    </div>
+    <input type="hidden" id="mf-id">
+    <input type="hidden" id="mf-os-id">
+    <div class="form-group">
+      <label>Nome do Fornecedor *</label>
+      <input type="text" id="mf-nome" class="form-control" placeholder="Ex: Visata, Alucobond…">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Contato (tel / e-mail)</label>
+        <input type="text" id="mf-contato" class="form-control" placeholder="(11) 9…">
+      </div>
+      <div class="form-group">
+        <label>Valor Total Previsto</label>
+        <input type="number" id="mf-valor" class="form-control" placeholder="0,00" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Observação</label>
+      <textarea id="mf-obs" class="form-control" rows="2" placeholder="Condições, prazo de entrega…" style="resize:vertical"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharModalForn()">Cancelar</button>
+      <button class="btn btn-primary" id="mf-salvar" onclick="salvarFornecedor()">Salvar Fornecedor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL 2 — Adicionar / Editar Boleto
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-boleto">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="mb-title">Adicionar Boleto</div>
+      <button class="btn-modal-close" onclick="fecharModalBoleto()">✕</button>
+    </div>
+    <input type="hidden" id="mb-id">
+    <input type="hidden" id="mb-forn-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor *</label>
+        <input type="number" id="mb-valor" class="form-control" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Vencimento</label>
+        <input type="date" id="mb-venc" class="form-control">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nº Documento / Boleto</label>
+        <input type="text" id="mb-num" class="form-control" placeholder="00000.0000…">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="mb-desc" class="form-control" placeholder="Sinal 30%, Parcela 1/2…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="mb-status" class="form-control">
+          <option value="Pendente">Pendente</option>
+          <option value="Pago">Pago</option>
+          <option value="Atrasado">Atrasado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Forma de Pagamento</label>
+        <select id="mb-forma" class="form-control">
+          <option value="">Não informado</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto Bancário</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="mb-dt-pag-wrap" style="display:none">
+      <label>Data de Pagamento</label>
+      <input type="date" id="mb-dt-pag" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Observação</label>
+      <input type="text" id="mb-obs" class="form-control" placeholder="Referência, número da NF…">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharModalBoleto()">Cancelar</button>
+      <button class="btn btn-primary" id="mb-salvar" onclick="salvarBoleto()">Salvar Boleto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL 3 — Marcar como Pago (com upload)
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-pagar">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✅ Confirmar Pagamento</div>
+      <button class="btn-modal-close" onclick="fecharModalPagar()">✕</button>
+    </div>
+    <input type="hidden" id="mp-id">
+    <div id="mp-resumo" style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Data de Pagamento *</label>
+        <input type="date" id="mp-data" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Forma de Pagamento</label>
+        <select id="mp-forma" class="form-control">
+          <option value="">Não informado</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto Bancário</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Comprovante (opcional)</label>
+      <input type="file" id="mp-file" class="form-control" accept="image/*,.pdf">
+      <div id="mp-comp-atual" style="margin-top:6px;display:none">
+        <a id="mp-comp-link" href="#" target="_blank" style="font-size:12px;color:var(--accent)">📎 Ver comprovante atual</a>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharModalPagar()">Cancelar</button>
+      <button class="btn btn-save" id="mp-confirmar" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/supabase.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/services/crmService.js"></script>
+<script src="js/services/financeiroService.js"></script>
+<script src="js/services/comprasService.js"></script>
+
+<script>
+/* db, TABLES, STORAGE_BUCKET → js/core/supabase.js
+   esc, brl, fmtDate, toast    → js/core/utils.js
+   authGate                    → js/core/auth.js
+   comprasService              → js/services/comprasService.js */
+
+/* ─── Estado ─────────────────────────────────────────── */
+let _osData    = [];   // lista de OS com fornecedores+boletos (nested)
+let _filtered  = [];   // lista filtrada para render
+let _fBusca    = '';
+let _fStatus   = '';
+let _fPend     = '';
+let _openOS    = new Set();  // IDs de OS abertas (accordion)
+let _openForn  = new Set();  // IDs de fornecedores abertos
+
+/* State dos modais */
+let _mfEditId  = null;   // editar fornecedor
+let _mbEditId  = null;   // editar boleto
+let _mpBoleto  = null;   // boleto sendo pago (objeto)
+
+/* ─── Bootstrap ──────────────────────────────────────── */
+window.addEventListener('load', async function(){
+  if(!(await authGate())) return;
+  await carregarDados();
+  const ov=document.getElementById('overlay');
+  ov.style.opacity='0';
+  setTimeout(function(){ov.style.display='none';},400);
+});
+
+/* ─── Data ───────────────────────────────────────────── */
+async function carregarDados(){
+  const {data, error} = await comprasService.carregarOSComFornecedores();
+  if(error){ toast('Erro ao carregar: '+error.message,'err'); return; }
+  _osData = data || [];
+  // Recalcula status efetivo dos boletos no front
+  _osData.forEach(function(os){
+    (os.compras_fornecedores_os||[]).forEach(function(f){
+      (f.boletos_fornecedores||[]).forEach(function(b){
+        b.status = comprasService.statusEfetivo(b);
+      });
+    });
+  });
+  renderTudo();
+}
+
+async function recarregarOS(osId){
+  const {data, error} = await comprasService.carregarOSPorId(osId);
+  if(error || !data) return;
+  data.compras_fornecedores_os = data.compras_fornecedores_os || [];
+  data.compras_fornecedores_os.forEach(function(f){
+    (f.boletos_fornecedores||[]).forEach(function(b){
+      b.status = comprasService.statusEfetivo(b);
+    });
+  });
+  const idx = _osData.findIndex(function(o){return o.id===osId;});
+  if(idx>=0) _osData[idx] = data;
+  else _osData.unshift(data);
+  renderTudo();
+}
+
+/* ─── Filter ─────────────────────────────────────────── */
+let _dbTimer;
+function debouncedFiltro(){clearTimeout(_dbTimer);_dbTimer=setTimeout(function(){_fBusca=document.getElementById('f-busca').value.trim();renderTudo();},220);}
+
+function limparFiltros(){
+  document.getElementById('f-busca').value='';
+  document.getElementById('f-status').value='';
+  document.getElementById('f-pend').value='';
+  _fBusca='';_fStatus='';_fPend='';
+  renderTudo();
+}
+
+function filtrar(){
+  _fStatus = document.getElementById('f-status').value;
+  _fPend   = document.getElementById('f-pend').value;
+  let list = [..._osData];
+  if(_fBusca){
+    const q=_fBusca.toLowerCase();
+    list=list.filter(function(os){
+      return (os.codigo_orcamento||'').toLowerCase().includes(q)
+          || (os.nome||'').toLowerCase().includes(q)
+          || (os.razao_social||'').toLowerCase().includes(q)
+          || (os.nome_contato||'').toLowerCase().includes(q)
+          || (os.produto||'').toLowerCase().includes(q);
+    });
+  }
+  if(_fStatus){
+    list=list.filter(function(os){
+      const st=os.status_os||'Em andamento';
+      if(_fStatus==='Concluida') return st==='Concluída'||st==='Concluida';
+      return st===_fStatus;
+    });
+  }
+  if(_fPend){
+    list=list.filter(function(os){
+      const tots=comprasService.calcTotaisOS(os.compras_fornecedores_os);
+      if(_fPend==='atrasado') return tots.atrasado>0;
+      if(_fPend==='pendente') return tots.pendente>0||tots.atrasado>0;
+      if(_fPend==='quitado')  return tots.total>0 && tots.pago>=tots.total;
+      return true;
+    });
+  }
+  return list;
+}
+
+/* ─── Render principal ───────────────────────────────── */
+function renderTudo(){
+  _filtered = filtrar();
+  renderKPIs();
+  renderListaOS();
+  const rc=document.getElementById('result-count');
+  if(rc) rc.textContent=_filtered.length+' de '+_osData.length+' obra'+(_osData.length!==1?'s':'');
+}
+
+function renderKPIs(){
+  let obras=0, totalDesp=0, totalPago=0, totalPend=0, totalAtr=0;
+  _filtered.forEach(function(os){
+    const fns=os.compras_fornecedores_os||[];
+    if(fns.length>0) obras++;
+    const t=comprasService.calcTotaisOS(fns);
+    totalDesp+=t.total;
+    totalPago+=t.pago;
+    totalPend+=t.pendente;
+    totalAtr+=t.atrasado;
+  });
+  document.getElementById('k-obras').textContent=obras;
+  document.getElementById('k-obras-sub').textContent=_filtered.length+' OS'+(_filtered.length!==1?'s':'')+' na listagem';
+  document.getElementById('k-desp').textContent=brl(totalDesp);
+  document.getElementById('k-pago').textContent=brl(totalPago);
+  const pct=totalDesp>0?Math.round(totalPago/totalDesp*100):0;
+  document.getElementById('k-pago-pct').textContent=pct+'% do total';
+  document.getElementById('k-pend').textContent=brl(totalPend);
+  document.getElementById('k-atr').textContent=brl(totalAtr);
+  document.getElementById('k-atr').style.color=totalAtr>0?'var(--red)':'var(--text-muted)';
+}
+
+function renderListaOS(){
+  const wrap=document.getElementById('lista-os');
+  if(!_filtered.length){
+    wrap.innerHTML='<div class="empty-msg">Nenhuma OS encontrada com os filtros aplicados.<br><span style="font-size:11px">Abra um pedido em <a href="pedidos.html" style="color:var(--accent)">Pedidos</a> e vincule fornecedores aqui.</span></div>';
+    return;
+  }
+  wrap.innerHTML=_filtered.map(function(os){
+    return renderOSCard(os);
+  }).join('');
+}
+
+/* ─── Render OS Card (accordion pai) ─────────────────── */
+function renderOSCard(os){
+  const fns  = os.compras_fornecedores_os||[];
+  const tots = comprasService.calcTotaisOS(fns);
+  const valor= parseFloat(os.valor||0);
+  const lucro= valor - tots.total;
+  const margemPct = valor>0 ? (lucro/valor*100) : null;
+  const pctPago   = tots.total>0 ? Math.min(100,(tots.pago/tots.total*100)) : 0;
+  const isOpen    = _openOS.has(os.id);
+  const hasAtr    = tots.atrasado>0;
+
+  const osStatus  = os.status_os||'Em andamento';
+  const badgeCls  = osStatus==='Em andamento'?'os-andamento'
+                  : osStatus==='Aguardando'  ?'os-aguardando'
+                  : (osStatus==='Congelada'  ?'os-congelada'
+                  : 'os-concluida');
+
+  let margemHtml='';
+  if(margemPct!==null){
+    const mc=margemPct>=30?'color:var(--green)':margemPct>=20?'color:var(--yellow)':'color:var(--red)';
+    margemHtml='<div class="os-fin-item"><div class="os-fin-label">Margem</div><div class="os-fin-val" style="'+mc+'">'+margemPct.toFixed(1)+'%</div></div>';
+  }
+
+  const nomeCliente=os.razao_social||(os.nome_contato||os.nome||'—');
+
+  return '<div class="os-accordion'+(isOpen?' open':'')+(hasAtr?' has-atrasado':'')+'" id="os-acc-'+os.id+'">'
+    +'<div class="os-header" onclick="toggleOS('+os.id+')">'
+    +'  <span class="os-chevron">&#9654;</span>'
+    +'  <div class="os-meta">'
+    +'    <div class="os-cod">'+esc(os.codigo_orcamento||'OS #'+os.id)
+    +'      <span class="os-badge '+badgeCls+'" style="margin-left:8px">'+esc(osStatus)+'</span>'
+    +'    </div>'
+    +'    <div class="os-nome">'+esc(nomeCliente)+'</div>'
+    +'    <div class="os-produto">'+esc(os.produto||'')+(os.vendedor?' · <span style="color:var(--accent)">'+esc(os.vendedor)+'</span>':'')+'</div>'
+    +'  </div>'
+    +'  <div class="os-financeiro">'
+    +'    <div class="os-fin-item"><div class="os-fin-label">Contrato</div><div class="os-fin-val" style="color:var(--accent)">'+brl(valor)+'</div></div>'
+    +'    <div class="os-fin-item"><div class="os-fin-label">Despesas</div><div class="os-fin-val" style="color:var(--orange)">'+brl(tots.total)+'</div></div>'
+    +'    <div class="os-fin-item"><div class="os-fin-label">Pago</div><div class="os-fin-val" style="color:var(--green)">'+brl(tots.pago)+'</div></div>'
+    +(tots.atrasado>0?'<div class="os-fin-item"><div class="os-fin-label">Atrasado</div><div class="os-fin-val" style="color:var(--red)">'+brl(tots.atrasado)+'</div></div>':'')
+    +margemHtml
+    +'    <div class="os-fin-item"><div class="os-fin-label">Fornecedores</div><div class="os-fin-val" style="color:var(--text-dim)">'+fns.length+'</div></div>'
+    +'  </div>'
+    +'</div>'/* fim os-header */
+    +'<div class="os-body">'
+    +'  <div class="os-progress-wrap"><div class="os-progress-bar" style="width:'+pctPago.toFixed(0)+'%;background:'+(tots.atrasado>0?'var(--red)':'var(--green)')+'"></div></div>'
+    +'  <div class="forn-list" id="forn-list-'+os.id+'">'+renderFornList(os)+'</div>'
+    +'  <button class="btn-add-forn" onclick="abrirModalForn('+os.id+')">+ Adicionar Fornecedor</button>'
+    +'</div>'/* fim os-body */
+    +'</div>';/* fim os-accordion */
+}
+
+/* ─── Render lista de fornecedores ───────────────────── */
+function renderFornList(os){
+  const fns=os.compras_fornecedores_os||[];
+  if(!fns.length) return '<div class="empty-forn">Nenhum fornecedor vinculado. Clique em "+ Adicionar Fornecedor".</div>';
+  return fns.map(function(f){ return renderFornCard(f); }).join('');
+}
+
+/* ─── Render fornecedor accordion ────────────────────── */
+function renderFornCard(f){
+  const boletos = f.boletos_fornecedores||[];
+  const total   = comprasService.totalBoletos(boletos);
+  const pago    = comprasService.totalPago(boletos);
+  const pend    = comprasService.totalPendente(boletos);
+  const atr     = boletos.filter(function(b){return b.status==='Atrasado';}).reduce(function(s,b){return s+parseFloat(b.valor||0);},0);
+  const isOpen  = _openForn.has(f.id);
+  const hasAtr  = atr>0;
+
+  let badges='<span class="forn-total">'+brl(total)+'</span>';
+  if(pago>0)  badges+='<span class="forn-pago-badge">✓ '+brl(pago)+'</span>';
+  if(atr>0)   badges+='<span class="forn-atr-badge">⚠ '+brl(atr)+'</span>';
+  else if(pend>0) badges+='<span class="forn-pend-badge">'+brl(pend)+' pendente</span>';
+
+  return '<div class="forn-accordion'+(isOpen?' open':'')+(hasAtr?' has-atrasado':'')+'" id="forn-acc-'+f.id+'">'
+    +'<div class="forn-header" onclick="toggleForn('+f.id+')">'
+    +'  <span class="forn-chevron">&#9654;</span>'
+    +'  <div class="forn-nome">🏭 '+esc(f.fornecedor_nome)+'</div>'
+    +'  <div class="forn-badges">'+badges+'</div>'
+    +'  <button class="btn-forn-edit" onclick="event.stopPropagation();abrirEditarForn('+f.id+')" title="Editar fornecedor">✏️</button>'
+    +'  <button class="btn-forn-del"  onclick="event.stopPropagation();deletarFornecedor('+f.id+','+f.os_id+')" title="Remover fornecedor">🗑</button>'
+    +'</div>'
+    +'<div class="forn-body">'
+    +  renderBoletosTable(f)
+    +'  <button class="btn-add-boleto" onclick="abrirModalBoleto('+f.id+')">+ Adicionar Boleto</button>'
+    +'</div>'
+    +'</div>';
+}
+
+/* ─── Render tabela de boletos ───────────────────────── */
+function renderBoletosTable(f){
+  const boletos=f.boletos_fornecedores||[];
+  if(!boletos.length) return '<div class="empty-forn" style="font-size:11px">Nenhum boleto cadastrado.</div>';
+  const rows=boletos.map(function(b){
+    const stCls = b.status==='Pago'?'st-pago':b.status==='Atrasado'?'st-atrasado':'st-pendente';
+    const compBtn = b.comprovante_url
+      ? '<a href="#" class="gf-clip has" onclick="verComprovante(event,\''+esc(b.comprovante_url)+'\')" title="Ver comprovante">📎</a>'
+      : '<span class="gf-clip empty" title="Sem comprovante">📎</span>';
+    const acoesHtml = b.status!=='Pago'
+      ? '<button class="btn-act btn-pagar" onclick="abrirModalPagar('+b.id+','+f.id+')">✅ Pagar</button> '
+      : '';
+    return '<tr>'
+      +'<td>'+esc(b.numero_documento||'—')+'</td>'
+      +'<td>'+esc(b.descricao||'—')+'</td>'
+      +'<td style="font-family:\'DM Mono\',monospace;font-weight:700;color:var(--orange)">'+brl(b.valor)+'</td>'
+      +'<td style="font-size:11px">'+fmtDate(b.data_vencimento)+'</td>'
+      +'<td><span class="st-badge '+stCls+'">'+esc(b.status)+'</span></td>'
+      +'<td style="font-size:11px;color:var(--text-muted)">'+fmtDate(b.data_pagamento)+'</td>'
+      +'<td>'+compBtn+'</td>'
+      +'<td>'
+      +  acoesHtml
+      +'  <button class="btn-act btn-editar" onclick="abrirEditarBoleto('+b.id+','+f.id+')">✏️</button> '
+      +'  <button class="btn-act btn-del"    onclick="deletarBoleto('+b.id+','+f.id+','+f.os_id+')">🗑</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="boletos-wrap"><table class="boletos-table">'
+    +'<thead><tr>'
+    +'<th>Nº Doc</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Pago em</th><th>Comp.</th><th>Ações</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table></div>';
+}
+
+/* ─── Accordion toggles ──────────────────────────────── */
+function toggleOS(osId){
+  const el=document.getElementById('os-acc-'+osId);
+  if(!el)return;
+  if(_openOS.has(osId)){_openOS.delete(osId);el.classList.remove('open');}
+  else{_openOS.add(osId);el.classList.add('open');}
+}
+function toggleForn(fornId){
+  const el=document.getElementById('forn-acc-'+fornId);
+  if(!el)return;
+  if(_openForn.has(fornId)){_openForn.delete(fornId);el.classList.remove('open');}
+  else{_openForn.add(fornId);el.classList.add('open');}
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL FORNECEDOR
+═══════════════════════════════════════════════════════ */
+function abrirModalForn(osId){
+  _mfEditId=null;
+  document.getElementById('mf-title').textContent='Adicionar Fornecedor';
+  document.getElementById('mf-id').value='';
+  document.getElementById('mf-os-id').value=osId;
+  document.getElementById('mf-nome').value='';
+  document.getElementById('mf-contato').value='';
+  document.getElementById('mf-valor').value='';
+  document.getElementById('mf-obs').value='';
+  document.getElementById('modal-forn').classList.add('open');
+  setTimeout(function(){document.getElementById('mf-nome').focus();},80);
+}
+
+function abrirEditarForn(fornId){
+  // Localiza o fornecedor no cache
+  let forn=null;
+  for(const os of _osData){
+    forn=(os.compras_fornecedores_os||[]).find(function(f){return f.id===fornId;});
+    if(forn)break;
+  }
+  if(!forn)return;
+  _mfEditId=fornId;
+  document.getElementById('mf-title').textContent='Editar Fornecedor';
+  document.getElementById('mf-id').value=fornId;
+  document.getElementById('mf-os-id').value=forn.os_id;
+  document.getElementById('mf-nome').value=forn.fornecedor_nome||'';
+  document.getElementById('mf-contato').value=forn.contato||'';
+  document.getElementById('mf-valor').value=forn.valor_total_previsto||'';
+  document.getElementById('mf-obs').value=forn.observacao||'';
+  document.getElementById('modal-forn').classList.add('open');
+}
+
+function fecharModalForn(){document.getElementById('modal-forn').classList.remove('open');}
+
+async function salvarFornecedor(){
+  const nome=document.getElementById('mf-nome').value.trim();
+  if(!nome){document.getElementById('mf-nome').focus();toast('Informe o nome do fornecedor','warn');return;}
+  const osId=parseInt(document.getElementById('mf-os-id').value);
+  const dados={
+    fornecedor_nome: nome,
+    contato:         document.getElementById('mf-contato').value.trim()||null,
+    valor_total_previsto: parseFloat(document.getElementById('mf-valor').value)||0,
+    observacao:      document.getElementById('mf-obs').value.trim()||null,
+    os_id:           osId
+  };
+  const btn=document.getElementById('mf-salvar');
+  btn.disabled=true;btn.textContent='Salvando…';
+  let error;
+  if(_mfEditId){
+    ({error}=await comprasService.atualizarFornecedor(_mfEditId,dados));
+  } else {
+    ({error}=await comprasService.inserirFornecedor(dados));
+  }
+  btn.disabled=false;btn.textContent='Salvar Fornecedor';
+  if(error){toast('Erro: '+error.message,'err');return;}
+  fecharModalForn();
+  toast(_mfEditId?'Fornecedor atualizado':'Fornecedor adicionado!','ok');
+  _openOS.add(osId);
+  await recarregarOS(osId);
+}
+
+async function deletarFornecedor(fornId, osId){
+  if(!confirm('Remover este fornecedor e todos os seus boletos?'))return;
+  const{error}=await comprasService.deletarFornecedor(fornId);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  _openForn.delete(fornId);
+  toast('Fornecedor removido','ok');
+  await recarregarOS(osId);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL BOLETO
+═══════════════════════════════════════════════════════ */
+function _encontrarBoleto(boletoId){
+  for(const os of _osData){
+    for(const f of (os.compras_fornecedores_os||[])){
+      const b=(f.boletos_fornecedores||[]).find(function(x){return x.id===boletoId;});
+      if(b) return {boleto:b, forn:f};
+    }
+  }
+  return null;
+}
+
+function _encontrarForn(fornId){
+  for(const os of _osData){
+    const f=(os.compras_fornecedores_os||[]).find(function(x){return x.id===fornId;});
+    if(f) return {forn:f, os};
+  }
+  return null;
+}
+
+function abrirModalBoleto(fornId){
+  _mbEditId=null;
+  document.getElementById('mb-title').textContent='Adicionar Boleto';
+  document.getElementById('mb-id').value='';
+  document.getElementById('mb-forn-id').value=fornId;
+  ['mb-valor','mb-venc','mb-num','mb-desc','mb-obs'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('mb-status').value='Pendente';
+  document.getElementById('mb-forma').value='';
+  document.getElementById('mb-dt-pag-wrap').style.display='none';
+  document.getElementById('modal-boleto').classList.add('open');
+  setTimeout(function(){document.getElementById('mb-valor').focus();},80);
+}
+
+function abrirEditarBoleto(boletoId, fornId){
+  const found=_encontrarBoleto(boletoId);
+  if(!found)return;
+  const b=found.boleto;
+  _mbEditId=boletoId;
+  document.getElementById('mb-title').textContent='Editar Boleto';
+  document.getElementById('mb-id').value=boletoId;
+  document.getElementById('mb-forn-id').value=b.fornecedor_os_id;
+  document.getElementById('mb-valor').value=b.valor||'';
+  document.getElementById('mb-venc').value=b.data_vencimento||'';
+  document.getElementById('mb-num').value=b.numero_documento||'';
+  document.getElementById('mb-desc').value=b.descricao||'';
+  document.getElementById('mb-status').value=b.status||'Pendente';
+  document.getElementById('mb-forma').value=b.forma_pagamento||'';
+  document.getElementById('mb-obs').value=b.observacao||'';
+  const isPago=b.status==='Pago';
+  document.getElementById('mb-dt-pag-wrap').style.display=isPago?'':'none';
+  document.getElementById('mb-dt-pag').value=b.data_pagamento||'';
+  document.getElementById('modal-boleto').classList.add('open');
+}
+
+document.getElementById('mb-status').addEventListener('change',function(){
+  document.getElementById('mb-dt-pag-wrap').style.display=this.value==='Pago'?'':'none';
+});
+
+function fecharModalBoleto(){document.getElementById('modal-boleto').classList.remove('open');}
+
+async function salvarBoleto(){
+  const valor=parseFloat(document.getElementById('mb-valor').value);
+  if(!valor||valor<=0){document.getElementById('mb-valor').focus();toast('Informe o valor do boleto','warn');return;}
+  const fornId=parseInt(document.getElementById('mb-forn-id').value);
+  const status=document.getElementById('mb-status').value;
+  const dados={
+    fornecedor_os_id: fornId,
+    valor:            valor,
+    data_vencimento:  document.getElementById('mb-venc').value||null,
+    numero_documento: document.getElementById('mb-num').value.trim()||null,
+    descricao:        document.getElementById('mb-desc').value.trim()||null,
+    status:           status,
+    forma_pagamento:  document.getElementById('mb-forma').value||null,
+    observacao:       document.getElementById('mb-obs').value.trim()||null,
+    data_pagamento:   status==='Pago'?(document.getElementById('mb-dt-pag').value||null):null,
+  };
+  const btn=document.getElementById('mb-salvar');
+  btn.disabled=true;btn.textContent='Salvando…';
+  let error;
+  if(_mbEditId){
+    ({error}=await comprasService.atualizarBoleto(_mbEditId,dados));
+  } else {
+    ({error}=await comprasService.inserirBoleto(dados));
+  }
+  btn.disabled=false;btn.textContent='Salvar Boleto';
+  if(error){toast('Erro: '+error.message,'err');return;}
+  fecharModalBoleto();
+  toast(_mbEditId?'Boleto atualizado':'Boleto adicionado!','ok');
+  // Recarrega OS do fornecedor
+  const found=_encontrarForn(fornId);
+  if(found){
+    _openOS.add(found.os.id);
+    _openForn.add(fornId);
+    await recarregarOS(found.os.id);
+  }
+}
+
+async function deletarBoleto(boletoId, fornId, osId){
+  if(!confirm('Remover este boleto?'))return;
+  const{error}=await comprasService.deletarBoleto(boletoId);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  _openOS.add(osId);
+  _openForn.add(fornId);
+  toast('Boleto removido','ok');
+  await recarregarOS(osId);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL PAGAMENTO
+═══════════════════════════════════════════════════════ */
+function abrirModalPagar(boletoId, fornId){
+  const found=_encontrarBoleto(boletoId);
+  if(!found)return;
+  _mpBoleto={boleto:found.boleto, forn:found.forn};
+  document.getElementById('mp-id').value=boletoId;
+  document.getElementById('mp-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mp-forma').value='';
+  // Arquivo
+  const fi=document.getElementById('mp-file');
+  fi.value='';
+  // Comprovante atual
+  const compAtual=document.getElementById('mp-comp-atual');
+  const compLink=document.getElementById('mp-comp-link');
+  if(found.boleto.comprovante_url){
+    compAtual.style.display='block';
+    compLink.onclick=function(e){e.preventDefault();verComprovante(e,found.boleto.comprovante_url);};
+  } else {
+    compAtual.style.display='none';
+  }
+  // Resumo
+  document.getElementById('mp-resumo').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center">'
+    +'<div><div style="font-weight:700">'+esc(found.forn.fornecedor_nome)+'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+esc(found.boleto.descricao||found.boleto.numero_documento||'Boleto #'+boletoId)+'</div></div>'
+    +'<div style="font-size:18px;font-weight:700;font-family:DM Mono,monospace;color:var(--orange)">'+brl(found.boleto.valor)+'</div>'
+    +'</div>';
+  document.getElementById('modal-pagar').classList.add('open');
+}
+
+function fecharModalPagar(){document.getElementById('modal-pagar').classList.remove('open');}
+
+async function confirmarPagamento(){
+  const boletoId=parseInt(document.getElementById('mp-id').value);
+  const data=document.getElementById('mp-data').value;
+  if(!data){document.getElementById('mp-data').focus();toast('Informe a data de pagamento','warn');return;}
+  const forma=document.getElementById('mp-forma').value;
+  const btn=document.getElementById('mp-confirmar');
+  btn.disabled=true;btn.textContent='Processando…';
+
+  // Upload de comprovante (se selecionado)
+  let comprovanteUrl=null;
+  const fileInput=document.getElementById('mp-file');
+  if(fileInput.files&&fileInput.files[0]){
+    const file=fileInput.files[0];
+    const ext=file.name.split('.').pop();
+    const path='comprovantes/boleto_'+boletoId+'_'+Date.now()+'.'+ext;
+    const{error:upErr}=await comprasService.uploadComprovante(path,file,file.type);
+    if(upErr){toast('Erro no upload: '+upErr.message,'err');btn.disabled=false;btn.textContent='✅ Confirmar Pagamento';return;}
+    comprovanteUrl=path;
+  }
+
+  const{error}=await comprasService.marcarPago(boletoId,data,forma,comprovanteUrl);
+  btn.disabled=false;btn.textContent='✅ Confirmar Pagamento';
+  if(error){toast('Erro: '+error.message,'err');return;}
+  fecharModalPagar();
+  toast('Pagamento registrado com sucesso!','ok');
+  if(_mpBoleto){
+    const osId=_mpBoleto.forn.os_id;
+    _openOS.add(osId);
+    _openForn.add(_mpBoleto.forn.id);
+    await recarregarOS(osId);
+  }
+}
+
+/* ─── Comprovante (signed URL) ───────────────────────── */
+async function verComprovante(event, path){
+  event.preventDefault();
+  const{data,error}=await comprasService.urlAssinadaComprovante(path,3600);
+  if(error||!data||!data.signedUrl){toast('Erro ao abrir comprovante','err');return;}
+  window.open(data.signedUrl,'_blank');
+}
+
+/* ─── Overlay close on backdrop click ───────────────── */
+['modal-forn','modal-boleto','modal-pagar'].forEach(function(id){
+  const el=document.getElementById(id);
+  el.addEventListener('click',function(e){
+    if(e.target===el) {
+      if(id==='modal-forn')fecharModalForn();
+      else if(id==='modal-boleto')fecharModalBoleto();
+      else fecharModalPagar();
+    }
+  });
+});
+</script>
+</body>
+</html>

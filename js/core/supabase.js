@@ -20,7 +20,9 @@ const TABLES = {
   GASTOS:         'gastos_fixos',
   VARIAVEIS:      'crm_gastos_variaveis',
   MOVIMENTACOES:  'financeiro_movimentacoes',
-  CATEGORIAS:     'crm_categorias'
+  CATEGORIAS:     'crm_categorias',
+  COMPRAS_FORN:   'compras_fornecedores_os',
+  BOLETOS_FORN:   'boletos_fornecedores'
 };
 const STORAGE_BUCKET = 'relatorios-tecnicos';
 
