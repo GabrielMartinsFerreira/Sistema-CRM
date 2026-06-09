@@ -20,7 +20,7 @@ const comprasService = {
         id, codigo_orcamento, nome, razao_social, nome_contato, produto,
         vendedor, valor, status_os, data_aprovacao, periodo_obra,
         compras_fornecedores_os (
-          id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo,
+          id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo, auto_org,
           boletos_fornecedores (
             id, numero_documento, descricao, valor,
             data_vencimento, status, data_pagamento,
@@ -40,7 +40,7 @@ const comprasService = {
         id, codigo_orcamento, nome, razao_social, nome_contato, produto,
         vendedor, valor, status_os, data_aprovacao,
         compras_fornecedores_os (
-          id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo,
+          id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo, auto_org,
           boletos_fornecedores (
             id, numero_documento, descricao, valor,
             data_vencimento, status, data_pagamento,
@@ -144,6 +144,13 @@ const comprasService = {
 
   urlAssinadaComprovante(path, expiraSeg=3600){
     return db.storage.from(STORAGE_BUCKET).createSignedUrl(path, expiraSeg);
+  },
+
+  /* ─── Preferências / Auto-Org ───────────────────────────────────────── */
+
+  /** Liga/desliga auto_org em TODOS os fornecedores de uma OS simultaneamente. */
+  toggleAutoOrgPorOS(osId, valor){
+    return db.from(TABLES.COMPRAS_FORN).update({auto_org: valor}).eq('os_id', osId);
   },
 
   /* ─── Relatório (VIEW) ───────────────────────────────────────────────── */
