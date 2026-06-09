@@ -2109,14 +2109,22 @@ function updateCharts(){
 }
 
 /* EXPORT */
+/* csvCell: sanitiza célula para CSV — evita fórmula injection (Excel/LibreOffice).
+ * Campos que iniciem com = + - @ \t são prefixados com ' para serem tratados como texto. */
+function csvCell(v){
+  const s=String(v==null?'':v).replace(/\r?\n/g,' ').replace(/"/g,'""');
+  if(/^[=+\-@\t]/.test(s)) return `"'${s}"`;
+  return `"${s}"`;
+}
 function exportarCSV(){
   const d=filteredLeads.length?filteredLeads:allLeads;
   if(!d.length){toast('Sem dados.','err');return}
   const hdr='Código;Vendedor;Cliente;Data;Produto;Valor (R$);Status;Motivo;Informações\n';
   const rows=d.map(l=>[
-    `"${l.codigo_orcamento||''}"`,`"${l.vendedor}"`,`"${l.nome||''}"`,`"${fmtDate(l.data)}"`,
-    `"${l.produto}"`,`"${parseFloat(l.valor).toFixed(2).replace('.',',')}"`,
-    `"${l.status}"`,`"${l.motivo||''}"`,`"${(l.informacoes||'').replace(/\n/g,' ')}"`
+    csvCell(l.codigo_orcamento||''), csvCell(l.vendedor||''), csvCell(l.nome||''),
+    csvCell(fmtDate(l.data)),        csvCell(l.produto||''),
+    csvCell(parseFloat(l.valor||0).toFixed(2).replace('.',',')),
+    csvCell(l.status||''), csvCell(l.motivo||''), csvCell(l.informacoes||'')
   ].join(';')).join('\n');
   const blob=new Blob(['\uFEFF'+hdr+rows],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);

@@ -1386,7 +1386,9 @@ async function abrirComprovante(ref){
       url=data.signedUrl;
     }catch(e){toast('Erro ao abrir comprovante: '+e.message,'err');return;}
   }
-  const win=window.open(url,'_blank');
+  // Segurança: apenas https:// é permitido (previne javascript: / data:)
+  if(!/^https:\/\//i.test(url)){toast('URL inválida ou protocolo não permitido','err');return;}
+  const win=window.open(url,'_blank','noopener,noreferrer');
   if(!win)toast('Pop-up bloqueado — permita pop-ups neste site','err');
 }
 

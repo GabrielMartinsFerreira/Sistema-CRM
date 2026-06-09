@@ -1482,7 +1482,9 @@ async function abrirAnexoTecnico(ref){
       url=data.signedUrl;
     }catch(e){ toast('Erro ao gerar link do relatório: '+(e.message||e),'err'); return; }
   }
-  const win=window.open(url,'_blank');
+  // Segurança: garante que apenas URLs https:// são abertas (previne javascript: / data:)
+  if(!/^https:\/\//i.test(url)){ toast('URL inválida ou protocolo não permitido','err'); return; }
+  const win=window.open(url,'_blank','noopener,noreferrer');
   if(!win){ toast('Pop-up bloqueado — permita pop-ups neste site para abrir o relatório','err'); return; }
 }
 function fecharOsCard(){

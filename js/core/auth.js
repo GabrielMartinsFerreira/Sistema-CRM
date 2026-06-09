@@ -8,6 +8,10 @@
  * ═══════════════════════════════════════════════════════════════════════ */
 let _authSession = null;
 
+/* ── Throttle de login (anti-brute-force client-side) ── */
+let _loginAttempts   = 0;
+let _loginBlockedUntil = 0;   // timestamp ms — 0 = não bloqueado
+
 /* Chamado no início de cada loader de página.
  * → true  = autenticado (segue o fluxo normal)
  * → false = sem sessão (mostra login e ABORTA o carregamento) */
@@ -47,13 +51,33 @@ function _renderLogin(){
     const pass =document.getElementById('auth-pass').value;
     const btn  =document.getElementById('auth-btn');
     if(!email||!pass){ _setAuthMsg('Informe e-mail e senha.'); return; }
+
+    /* Throttle: bloqueio temporário após 3 tentativas consecutivas */
+    const agora=Date.now();
+    if(_loginBlockedUntil > agora){
+      const restante=Math.ceil((_loginBlockedUntil - agora)/1000);
+      _setAuthMsg(`Muitas tentativas. Aguarde ${restante}s antes de tentar novamente.`);
+      return;
+    }
+
     btn.disabled=true; btn.textContent='Entrando…'; _setAuthMsg('');
     try{
       const { error } = await db.auth.signInWithPassword({ email, password:pass });
       if(error) throw error;
+      _loginAttempts=0;                   // sucesso → zera contador
       location.reload();                  // sessão criada → recarrega autenticado
     }catch(e){
-      _setAuthMsg('Falha no login: '+(e.message||e));
+      _loginAttempts++;
+      if(_loginAttempts>=3){
+        _loginBlockedUntil=Date.now()+30000;  // bloqueia 30 segundos
+        _loginAttempts=0;
+        _setAuthMsg('Acesso bloqueado por 30s após 3 tentativas incorretas.');
+        btn.disabled=true; btn.textContent='Bloqueado (30s)';
+        setTimeout(()=>{ btn.disabled=false; btn.textContent='Entrar'; _setAuthMsg(''); }, 30000);
+        return;
+      }
+      const restantes=3-_loginAttempts;
+      _setAuthMsg(`Falha no login: ${e.message||e} (${restantes} tentativa${restantes!==1?'s':''} restante${restantes!==1?'s':''})`);
       btn.disabled=false; btn.textContent='Entrar';
     }
   };
