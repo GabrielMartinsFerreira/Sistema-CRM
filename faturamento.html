@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
 <title>Faturamento — GG TECH CRM</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1153,7 +1154,8 @@ async function salvarCustos(){
       ({error}=await financeiroService.inserirFaturamento(dados));
     }
     if(error)throw error;
-    const{data:fat}=await financeiroService.buscarFaturamentoPorLead(leadId);
+    const{data:fat,error:fatErr}=await financeiroService.buscarFaturamentoPorLead(leadId);
+    if(fatErr && fatErr.code!=='PGRST116') throw fatErr; // PGRST116 = sem registro ainda (normal)
     if(fat)fatMap[leadId]=fat;
     renderKPIs();
     renderTabela();
