@@ -77,6 +77,20 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .sort-icon{font-size:10px;opacity:.7}
 .result-count{font-size:12px;color:var(--text-muted);margin-left:auto}
 
+/* VIEW TABS */
+.view-tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.vtab{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);font-family:'DM Sans',sans-serif;transition:all .15s}
+.vtab.active{background:var(--accent-glow);border-color:rgba(91,110,245,.4);color:var(--accent)}
+.vtab:hover:not(.active){border-color:var(--border-hover);color:var(--text)}
+.period-sel{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 10px;outline:none;transition:border-color .15s;display:none}
+.period-sel.visible{display:inline-block}
+/* COMPARISON KPI */
+.kpi-row-comp{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.kpi-comp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;text-align:center}
+.kpi-comp-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-comp-val{font-size:22px;font-weight:700;font-family:'DM Mono',monospace}
+.kpi-comp-var{font-size:11px;margin-top:4px;font-weight:600}
+.var-up{color:var(--green)}.var-down{color:var(--red)}.var-neu{color:var(--text-muted)}
 /* TABLE */
 .pedidos-table{width:100%;border-collapse:collapse;font-size:13px}
 .pedidos-table th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:0 10px 10px;text-align:left;border-bottom:1px solid var(--border)}
@@ -227,6 +241,15 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
 </header>
 
+<!-- VIEW TABS -->
+<div class="view-tabs" id="view-tabs">
+  <button class="vtab active" id="vtab-todos"  onclick="setViewMode('todos')">&#128203; Ver Todos</button>
+  <button class="vtab"        id="vtab-anual"  onclick="setViewMode('anual')">&#128197; Visão Anual</button>
+  <button class="vtab"        id="vtab-mensal" onclick="setViewMode('mensal')">&#128199; Visão Mensal</button>
+  <select id="sel-ano" class="period-sel" onchange="_filterYear=parseInt(this.value);renderTudo()"></select>
+  <select id="sel-mes" class="period-sel" onchange="_filterMonth=parseInt(this.value);renderTudo()"></select>
+</div>
+
 <!-- KPI CARDS -->
 <div class="kpi-row">
   <div class="kpi-card kc-total">
@@ -249,6 +272,25 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     <div class="kpi-label">A Receber</div>
     <div class="kpi-value" id="kpi-receber" style="color:var(--yellow)">—</div>
     <div class="kpi-sub">saldo pendente de recebimento</div>
+  </div>
+</div>
+
+<!-- COMPARISON KPIs: Mes Atual vs Mes Passado -->
+<div class="kpi-row-comp" id="kpi-comp-row" style="display:none">
+  <div class="kpi-comp-card" style="border-left:3px solid var(--accent)">
+    <div class="kpi-comp-label">&#128197; Mes Atual</div>
+    <div class="kpi-comp-val" id="kc-atual" style="color:var(--accent)">&#8212;</div>
+    <div class="kpi-comp-var" id="kc-atual-sub" style="color:var(--text-muted)">&#8212;</div>
+  </div>
+  <div class="kpi-comp-card" style="border-left:3px solid var(--purple)">
+    <div class="kpi-comp-label">&#128199; Mes Passado</div>
+    <div class="kpi-comp-val" id="kc-passado" style="color:var(--purple)">&#8212;</div>
+    <div class="kpi-comp-var" id="kc-passado-sub" style="color:var(--text-muted)">&#8212;</div>
+  </div>
+  <div class="kpi-comp-card" style="border-left:3px solid var(--green)">
+    <div class="kpi-comp-label">&#128202; Variacao</div>
+    <div class="kpi-comp-val" id="kc-variacao" style="color:var(--green)">&#8212;</div>
+    <div class="kpi-comp-var" id="kc-variacao-sub" style="color:var(--text-muted)">vs mes anterior</div>
   </div>
 </div>
 
@@ -588,6 +630,9 @@ let _fStatusOS = '';
 let _fVendedor = '';
 let _sortCol   = 'valor';
 let _sortDir   = 'desc';
+let _viewMode  = 'todos';                 // 'todos' | 'anual' | 'mensal'
+let _filterYear  = new Date().getFullYear();
+let _filterMonth = new Date().getMonth();   // 0-11
 
 let _editPedidoId    = null;
 let _modalPedidoId   = null;
@@ -657,6 +702,19 @@ function preencherFiltroVendedor(){
 /* ─── Filter & Sort ─────────────────────────────────── */
 function filtrarOrdenar(){
   let list=[..._pedidos];
+  // Time filter
+  if(_viewMode==='anual'){
+    list=list.filter(p=>{
+      if(!p.data_aprovacao)return false;
+      return new Date(p.data_aprovacao).getFullYear()===_filterYear;
+    });
+  } else if(_viewMode==='mensal'){
+    list=list.filter(p=>{
+      if(!p.data_aprovacao)return false;
+      const d=new Date(p.data_aprovacao);
+      return d.getFullYear()===_filterYear && d.getMonth()===_filterMonth;
+    });
+  }
   if(_fText){
     const q=_fText.toLowerCase();
     list=list.filter(p=>
@@ -715,8 +773,89 @@ function renderTudo(){
   _filtered=filtrarOrdenar();
   renderKPIs(_filtered);
   renderTabela(_filtered);
+  renderComparativo();
   atualizarSortBtns();
   atualizarFilterBadge();
+  atualizarViewUI();
+}
+
+/* ─── View Mode ─────────────────────────────────────── */
+const MESES_PT=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function setViewMode(mode){
+  _viewMode=mode;
+  if(mode!=='todos'){
+    const now=new Date();
+    _filterYear=now.getFullYear();
+    _filterMonth=now.getMonth();
+  }
+  renderTudo();
+}
+
+function atualizarViewUI(){
+  ['todos','anual','mensal'].forEach(function(m){
+    const btn=document.getElementById('vtab-'+m);
+    if(btn)btn.classList.toggle('active',_viewMode===m);
+  });
+  const selAno=document.getElementById('sel-ano');
+  const selMes=document.getElementById('sel-mes');
+  if(selAno){
+    const anos=[...new Set(_pedidos.map(function(p){return p.data_aprovacao?new Date(p.data_aprovacao).getFullYear():null;}).filter(Boolean))].sort(function(a,b){return b-a;});
+    if(!anos.includes(new Date().getFullYear()))anos.unshift(new Date().getFullYear());
+    selAno.innerHTML=anos.map(function(a){return '<option value="'+a+'"'+(a===_filterYear?' selected':'')+'>'+a+'</option>';}).join('');
+    selAno.className='period-sel'+(_viewMode!=='todos'?' visible':'');
+  }
+  if(selMes){
+    const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    selMes.innerHTML=MESES.map(function(m,i){return '<option value="'+i+'"'+(i===_filterMonth?' selected':'')+'>'+m+'</option>';}).join('');
+    selMes.className='period-sel'+(_viewMode==='mensal'?' visible':'');
+  }
+}
+
+function renderComparativo(){
+  const row=document.getElementById('kpi-comp-row');
+  if(!row)return;
+  const show=(_viewMode==='anual'||_viewMode==='mensal');
+  row.style.display=show?'':'none';
+  if(!show)return;
+  const now=new Date();
+  let mesAtual,anoAtualComp,mesPassado,anoPassado;
+  if(_viewMode==='mensal'){
+    mesAtual=_filterMonth; anoAtualComp=_filterYear;
+  } else {
+    mesAtual=now.getMonth(); anoAtualComp=now.getFullYear();
+  }
+  if(mesAtual===0){mesPassado=11;anoPassado=anoAtualComp-1;}
+  else{mesPassado=mesAtual-1;anoPassado=anoAtualComp;}
+  function somaComp(mes,ano){
+    return _pedidos.filter(function(p){
+      if(!p.data_aprovacao)return false;
+      const d=new Date(p.data_aprovacao);
+      return d.getFullYear()===ano && d.getMonth()===mes;
+    }).reduce(function(s,p){return s+parseFloat(p.valor||0);},0);
+  }
+  const vAtual=somaComp(mesAtual,anoAtualComp);
+  const vPassado=somaComp(mesPassado,anoPassado);
+  const elAtual=document.getElementById('kc-atual');
+  const elPassado=document.getElementById('kc-passado');
+  const elAtualSub=document.getElementById('kc-atual-sub');
+  const elPassadoSub=document.getElementById('kc-passado-sub');
+  const varEl=document.getElementById('kc-variacao');
+  const varSub=document.getElementById('kc-variacao-sub');
+  if(elAtual)elAtual.textContent=brl(vAtual);
+  if(elAtualSub)elAtualSub.textContent=MESES_PT[mesAtual]+' '+anoAtualComp;
+  if(elPassado)elPassado.textContent=brl(vPassado);
+  if(elPassadoSub)elPassadoSub.textContent=MESES_PT[mesPassado]+' '+anoPassado;
+  if(vPassado===0){
+    if(varEl){varEl.textContent=vAtual>0?'Novo':'—';varEl.className='kpi-comp-val var-neu';}
+    if(varSub)varSub.textContent='sem base anterior';
+  } else {
+    const pct=((vAtual-vPassado)/vPassado*100);
+    const arrow=pct>=0?'▲':'▼';
+    if(varEl){varEl.textContent=arrow+' '+Math.abs(pct).toFixed(1)+'%';varEl.className='kpi-comp-val '+(pct>=0?'var-up':'var-down');}
+    const diff=vAtual-vPassado;
+    if(varSub)varSub.textContent=(diff>=0?'+':'')+brl(diff)+' vs mes anterior';
+  }
 }
 
 function renderKPIs(list){
@@ -741,7 +880,7 @@ function renderTabela(list){
   const wrap=document.getElementById('pedidos-table-wrap');
   if(!list.length){wrap.innerHTML='<div class="empty-msg">Nenhum pedido encontrado com os filtros aplicados.</div>';return;}
 
-  const rows=list.map(p=>{
+  function buildRows(pedidoList){ return pedidoList.map(p=>{
     const recebido=valRecebido(p.id);
     const valor=parseFloat(p.valor||0);
     const aReceber=Math.max(0,valor-recebido);
@@ -787,7 +926,33 @@ function renderTabela(list){
         </div>
       </td>
     </tr>`;
-  }).join('');
+  }); }
+
+  let rows;
+  if(_viewMode==='todos'||_viewMode==='anual'){
+    // Group by month/year
+    const groups={};
+    list.forEach(function(p){
+      const key=p.data_aprovacao?p.data_aprovacao.slice(0,7):'9999-99';
+      if(!groups[key])groups[key]=[];
+      groups[key].push(p);
+    });
+    const sortedKeys=Object.keys(groups).sort(function(a,b){return b.localeCompare(a);});
+    const NCOLS=10;
+    rows=sortedKeys.map(function(key){
+      const grpList=groups[key];
+      const grpTotal=grpList.reduce(function(s,p){return s+parseFloat(p.valor||0);},0);
+      let label='Sem data';
+      if(key!=='9999-99'){
+        const parts=key.split('-');
+        label=MESES_PT[parseInt(parts[1])-1]+' '+parts[0];
+      }
+      const headerRow='<tr><td colspan="'+NCOLS+'" style="background:var(--bg-card2);border-top:2px solid var(--border);border-bottom:1px solid var(--border);padding:8px 14px"><span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px">'+label+'</span><span style="float:right;font-size:11px;color:var(--text-muted);font-family:DM Mono,monospace">'+grpList.length+' pedido'+(grpList.length!==1?'s':'')+' &middot; '+brl(grpTotal)+'</span></td></tr>';
+      return headerRow+buildRows(grpList).join('');
+    }).join('');
+  } else {
+    rows=buildRows(list).join('');
+  }
 
   wrap.innerHTML=`<div style="overflow-x:auto">
     <table class="pedidos-table">

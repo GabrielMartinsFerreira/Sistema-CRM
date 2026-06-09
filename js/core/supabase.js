@@ -19,7 +19,8 @@ const TABLES = {
   CLIENTES:       'crm_clientes',
   GASTOS:         'gastos_fixos',
   VARIAVEIS:      'crm_gastos_variaveis',
-  MOVIMENTACOES:  'financeiro_movimentacoes'
+  MOVIMENTACOES:  'financeiro_movimentacoes',
+  CATEGORIAS:     'crm_categorias'
 };
 const STORAGE_BUCKET = 'relatorios-tecnicos';
 

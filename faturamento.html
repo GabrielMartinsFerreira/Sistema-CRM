@@ -415,7 +415,10 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 <!-- VIEW GASTOS FIXOS -->
 <div id="view-gastos" style="display:none">
   <div class="card">
-    <div class="section-title">➕ Lançar Gasto Fixo — <span id="gf-mes-form-label">—</span></div>
+    <div class="section-title" style="justify-content:space-between">
+      <span>➕ Lançar Gasto Fixo — <span id="gf-mes-form-label">—</span></span>
+      <button class="btn-gf-del" onclick="abrirModalCategorias('fixo')" title="Gerenciar categorias" style="color:var(--text-muted);font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px">⚙️ Categorias</button>
+    </div>
     <div class="gf-form-row">
       <div class="form-group" style="margin:0">
         <label>Categoria</label>
@@ -475,24 +478,15 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 <!-- VIEW GASTOS VARIÁVEIS -->
 <div id="view-variaveis" style="display:none">
   <div class="card">
-    <div class="section-title">➕ Lançar Gasto Variável — <span id="gv-mes-form-label">—</span></div>
+    <div class="section-title" style="justify-content:space-between">
+      <span>➕ Lançar Gasto Variável — <span id="gv-mes-form-label">—</span></span>
+      <button class="btn-gf-del" onclick="abrirModalCategorias('variavel')" title="Gerenciar categorias" style="color:var(--text-muted);font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px">⚙️ Categorias</button>
+    </div>
     <div class="gv-form-row">
       <div class="form-group" style="margin:0">
-        <label>Categoria</label>
+        <label>Categoria / Tipo</label>
         <select id="gv-cat" class="form-control">
           <option value="">Selecione…</option>
-          <optgroup label="Produção / Obras">
-            <option>Matéria-prima extra / Reposição</option>
-            <option>Fretes e Carretos</option>
-            <option>Mão de obra terceirizada (Diárias)</option>
-          </optgroup>
-          <optgroup label="Comerciais / Vendas">
-            <option>Comissões de Vendedores/Closers</option>
-            <option>Taxas de Cartão / Emissão de Boletos</option>
-          </optgroup>
-          <optgroup label="Marketing">
-            <option>Anúncios / Tráfego Pago (Meta/Google Ads)</option>
-          </optgroup>
         </select>
       </div>
       <div class="form-group" style="margin:0">
@@ -697,6 +691,49 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
       <div class="dre-wrap" style="border:none"><div id="dre-modal-wrap"></div></div>
     </div>
   </div>
+</div>
+
+<!-- ═══ MODAL DE GESTÃO DE CATEGORIAS ═══ -->
+<div class="modal-overlay" id="modal-categorias">
+<div class="modal" style="max-width:620px">
+  <div class="modal-header">
+    <div class="modal-title" style="flex-direction:column;align-items:flex-start;gap:2px">
+      <span>⚙️ Gerenciar Categorias</span>
+      <span style="font-size:11px;color:var(--text-muted);font-weight:400">Adicione, edite ou remova itens do menu de despesas</span>
+    </div>
+    <button class="btn-modal-close" onclick="fecharModalCategorias()">✕</button>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px">
+    <button id="mc-tab-fixo" onclick="setCatTab('fixo')" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid var(--orange);color:var(--orange);font-family:'DM Sans',sans-serif;margin-bottom:-1px">🏢 Despesas Fixas</button>
+    <button id="mc-tab-variavel" onclick="setCatTab('variavel')" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;margin-bottom:-1px">📉 Despesas Variáveis</button>
+  </div>
+  <!-- Lista -->
+  <div id="mc-lista" style="max-height:320px;overflow-y:auto;margin-bottom:14px"></div>
+  <!-- Form Adicionar -->
+  <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">➕ Adicionar nova categoria</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Nome</label>
+        <input type="text" id="mc-nome" class="form-control" placeholder="Ex: Nova despesa…" style="font-size:13px" onkeydown="if(event.key==='Enter')adicionarCategoria()">
+      </div>
+      <div id="mc-grupo-wrap">
+        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Grupo</label>
+        <select id="mc-grupo" class="form-control" style="font-size:13px">
+          <option value="Infraestrutura">🏢 Infraestrutura</option>
+          <option value="Pessoal">👥 Pessoal</option>
+          <option value="Serviços">⚙️ Serviços</option>
+          <option value="Marketing/Financeiro">📣 Marketing</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="adicionarCategoria()" style="height:40px;white-space:nowrap;background:var(--green);color:#0c0e16">+ Adicionar</button>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-cancel-modal" onclick="fecharModalCategorias()">Fechar</button>
+  </div>
+</div>
 </div>
 
 <!-- MODAL DE CUSTOS -->
@@ -905,10 +942,11 @@ function fatCustos(f){ return financeiroService.deducoesDetalhadas(f); }
 async function carregar(){
   if(!(await authGate())) return;        // bloqueia sem sessão (mostra login)
   try{
-    const[{data:leads,error:e1},{data:fat,error:e2},{data:movs,error:e3}]=await Promise.all([
+    const[{data:leads,error:e1},{data:fat,error:e2},{data:movs,error:e3},{data:cats,error:e4}]=await Promise.all([
       financeiroService.carregarPedidos(),
       financeiroService.carregarFaturamento(),
-      financeiroService.carregarMovimentacoes()
+      financeiroService.carregarMovimentacoes(),
+      financeiroService.carregarCategorias()
     ]);
     if(e1)throw e1;
     if(e2)throw e2;
@@ -916,6 +954,8 @@ async function carregar(){
     fatMap={};
     (fat||[]).forEach(f=>{fatMap[f.lead_id]=f});
     _allMovsFat=movs||[];
+    _categoriasCache=cats||[];
+    popularCatVariavel();
     await loadGastosFixosDB();
     await loadVariaveisDB();
     await garantirSeriesDoAno(anoAtual);
@@ -1509,13 +1549,17 @@ async function loadGastosFixosDB(){
   }catch(e){ console.warn('gastos_fixos load:',e.message); }
   return _gastosCache;
 }
-const GF_SUGESTOES={
-  'Infraestrutura':['Aluguel','IPTU','Água/Esgoto','Energia Elétrica','Telefone','Internet'],
-  'Pessoal':['Folha de Pagamento','Pró-labore','FGTS/INSS','Benefícios','Vale-Transporte','Vale-Refeição'],
-  'Serviços':['Software/SaaS (CRM)','Contador','Limpeza','Manutenção','Segurança','Consultoria'],
-  'Marketing/Financeiro':['Anúncios Google/Meta','Taxas Bancárias','Juros/IOF','Material Gráfico','Outros']
+/* GF_SUGESTOES é agora DINÂMICO — carregado de crm_categorias via _categoriasCache */
+const GF_SUGESTOES_FALLBACK={
+  'Infraestrutura':['Aluguel','Sabesp','Internet - Telefone Fixo','Luz','Estacionamento','Manutenção de Equip - Veículos - Sistema'],
+  'Pessoal':['Pró-Labore','Salários','Impostos Funcionários','Vale Refeição - Vale Transporte'],
+  'Serviços':['Contabilidade','Limpeza Loja','Tarifs Bancárias','Cartão Crédito Empresa','Despesas Diversas','Mercado','Material Escritório'],
+  'Marketing/Financeiro':['Campanha Google','Gerenciamento Google | Marketing','Telefone Móvel']
 };
 const GF_CAT_CLASS={'Infraestrutura':'bc-infra','Pessoal':'bc-pessoal','Serviços':'bc-servicos','Marketing/Financeiro':'bc-marketing'};
+
+let _categoriasCache=[];
+let _mcTabAtual='fixo';
 
 function loadGastosFixos(){return _gastosCache;}
 function getGastosMes(m,a){return _gastosCache.filter(g=>g.mes===m&&g.ano===a);}
@@ -1523,7 +1567,100 @@ function getGastosMes(m,a){return _gastosCache.filter(g=>g.mes===m&&g.ano===a);}
 function atualizarItensGF(){
   const cat=document.getElementById('gf-cat').value;
   const dl=document.getElementById('gf-sugestoes');
-  dl.innerHTML=(GF_SUGESTOES[cat]||[]).map(s=>`<option value="${esc(s)}">`).join('');
+  // Tenta usar categorias do banco; fallback para lista interna
+  const fromDB=_categoriasCache.filter(c=>c.tipo==='fixo'&&(c.grupo||'')===cat).map(c=>c.nome);
+  const list=fromDB.length?fromDB:(GF_SUGESTOES_FALLBACK[cat]||[]);
+  dl.innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
+}
+
+function popularCatVariavel(){
+  const sel=document.getElementById('gv-cat');
+  if(!sel)return;
+  const items=_categoriasCache.filter(c=>c.tipo==='variavel');
+  const opts=items.length?
+    items.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join(''):
+    ['Imposto Sobre as Vendas','Reserva Técnica - Arquitetos','Adicional Noturno',
+     'Combustível','Refeição Variável','Prestação de serviços - Terceirizados',
+     'Tarifas de Antecipação Recebíveis','Comissão sobre as Vendas',
+     'Aquisição de Material para Vendas','Fretes e Carretos',
+     'Mão de obra terceirizada (Diárias)']
+     .map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  sel.innerHTML='<option value="">Selecione…</option>'+opts;
+}
+
+/* ─── Gerenciamento de Categorias ─────────────────────────── */
+function abrirModalCategorias(tipo){
+  _mcTabAtual=tipo||'fixo';
+  setCatTab(_mcTabAtual);
+  document.getElementById('modal-categorias').classList.add('open');
+}
+function fecharModalCategorias(){
+  document.getElementById('modal-categorias').classList.remove('open');
+}
+function setCatTab(tipo){
+  _mcTabAtual=tipo;
+  const isFix=tipo==='fixo';
+  const tbFix=document.getElementById('mc-tab-fixo');
+  const tbVar=document.getElementById('mc-tab-variavel');
+  if(tbFix){tbFix.style.borderBottomColor=isFix?'var(--orange)':'transparent';tbFix.style.color=isFix?'var(--orange)':'var(--text-muted)';}
+  if(tbVar){tbVar.style.borderBottomColor=!isFix?'var(--accent)':'transparent';tbVar.style.color=!isFix?'var(--accent)':'var(--text-muted)';}
+  document.getElementById('mc-grupo-wrap').style.display=isFix?'':'none';
+  renderListaCategorias();
+}
+function renderListaCategorias(){
+  const wrap=document.getElementById('mc-lista');
+  if(!wrap)return;
+  const items=_categoriasCache.filter(c=>c.tipo===_mcTabAtual);
+  if(!items.length){wrap.innerHTML='<div class="empty-msg" style="padding:20px">Nenhuma categoria cadastrada.</div>';return;}
+  const grupoIcon={'Infraestrutura':'🏢','Pessoal':'👥','Serviços':'⚙️','Marketing/Financeiro':'📣'};
+  wrap.innerHTML=items.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(37,40,64,.5)">
+      <span style="flex:1;font-size:13px">
+        ${c.grupo?`<span style="font-size:9px;color:var(--text-muted);margin-right:6px">${grupoIcon[c.grupo]||''} ${esc(c.grupo)}</span>`:''}
+        <span id="mc-nome-${c.id}">${esc(c.nome)}</span>
+      </span>
+      ${c.padrao?`<span style="font-size:9px;color:var(--text-muted);padding:2px 6px;background:var(--bg-card2);border-radius:4px">padrão</span>`:''}
+      <button class="btn-gf-del" onclick="editarNomeCategoria(${c.id},'${esc(c.nome).replace(/'/g,"\\'")}')">✏️</button>
+      <button class="btn-gf-del" onclick="deletarCategoria(${c.id})">🗑</button>
+    </div>`).join('');
+}
+function editarNomeCategoria(id, nomeAtual){
+  const novoNome=prompt('Novo nome da categoria:',nomeAtual);
+  if(!novoNome||novoNome.trim()===nomeAtual)return;
+  financeiroService.atualizarCategoria(id,{nome:novoNome.trim()}).then(({error})=>{
+    if(error){toast('Erro: '+error.message,'err');return;}
+    const c=_categoriasCache.find(x=>x.id===id);
+    if(c) c.nome=novoNome.trim();
+    renderListaCategorias();
+    atualizarItensGF();
+    popularCatVariavel();
+    toast('Categoria atualizada','ok');
+  });
+}
+async function deletarCategoria(id){
+  if(!confirm('Remover esta categoria das sugestões?'))return;
+  const{error}=await financeiroService.deletarCategoria(id);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  _categoriasCache=_categoriasCache.filter(c=>c.id!==id);
+  renderListaCategorias();
+  atualizarItensGF();
+  popularCatVariavel();
+  toast('Categoria removida','ok');
+}
+async function adicionarCategoria(){
+  const nome=document.getElementById('mc-nome').value.trim();
+  if(!nome){document.getElementById('mc-nome').focus();return;}
+  const grupo=_mcTabAtual==='fixo'?(document.getElementById('mc-grupo').value||null):null;
+  const ordem=_categoriasCache.filter(c=>c.tipo===_mcTabAtual).length+1;
+  const dados={tipo:_mcTabAtual,nome,grupo,padrao:false,ativo:true,ordem};
+  const{data,error}=await financeiroService.inserirCategoria(dados);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  if(data)_categoriasCache.push(data);
+  document.getElementById('mc-nome').value='';
+  renderListaCategorias();
+  atualizarItensGF();
+  popularCatVariavel();
+  toast('Categoria adicionada!','ok');
 }
 
 async function adicionarGasto(){
@@ -1799,7 +1936,9 @@ function renderGastosFixos(){
     if(badge)badge.textContent='';
     return;
   }
-  const cats=['Infraestrutura','Pessoal','Serviços','Marketing/Financeiro'];
+  // Grupos dinâmicos: prefere _categoriasCache, fallback estático
+  const catsFromDB=[...new Set(_categoriasCache.filter(x=>x.tipo==='fixo'&&x.grupo).map(x=>x.grupo))];
+  const cats=catsFromDB.length?catsFromDB:['Infraestrutura','Pessoal','Serviços','Marketing/Financeiro'];
   const stMap={'Pago':'s-pago','Atrasado':'s-atrasado','Agendado':'s-agendado','Pendente':'s-pendente'};
   const NCOLS=8;
   let rows='',total=0,totalPago=0;
@@ -2122,7 +2261,7 @@ function imprimirDRE(){
   win.document.close();
 }
 
-['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal','dre-modal'].forEach(id=>{
+['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal','dre-modal','modal-categorias'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)document.getElementById(id).classList.remove('open')});
 });
 window.onload=()=>{testeFaturamento();carregar();};

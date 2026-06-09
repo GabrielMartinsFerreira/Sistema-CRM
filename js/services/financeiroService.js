@@ -54,6 +54,20 @@ const financeiroService = {
     return (movimentacoes||[]).filter(m=>m.tipo==='Entrada' && ids.has(m.lead_id))
       .reduce((s,m)=>s+parseFloat(m.valor||0), 0);
   },
+  /* ─────────── CATEGORIAS DINÂMICAS ─────────── */
+  carregarCategorias(){
+    return db.from(TABLES.CATEGORIAS).select('*').eq('ativo',true).order('ordem',{ascending:true});
+  },
+  inserirCategoria(dados){
+    return db.from(TABLES.CATEGORIAS).insert([dados]).select().single();
+  },
+  atualizarCategoria(id,upd){
+    return db.from(TABLES.CATEGORIAS).update(upd).eq('id',id);
+  },
+  deletarCategoria(id){
+    return db.from(TABLES.CATEGORIAS).update({ativo:false}).eq('id',id);
+  },
+
   /* Soma de Saídas para um array de lead_ids */
   calcSaidas(movimentacoes, leadIds){
     const ids = new Set(leadIds);
