@@ -779,11 +779,20 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
         </div>
       </div>
       <div class="form-group"><label>Status da Visita</label>
-        <select id="vm-status" class="form-control">
+        <select id="vm-status" class="form-control" onchange="toggleVisitaRelatorio()">
           <option value="Pendente">Pendente</option>
           <option value="Agendada">Agendada</option>
           <option value="Concluída">Concluída</option>
         </select>
+      </div>
+      <div id="vm-relatorio-wrap" style="display:none">
+        <div class="form-group">
+          <label>📎 Relatório Técnico da Visita (opcional)</label>
+          <input type="file" id="vm-relatorio-file" accept="image/*,application/pdf" class="form-control" style="padding:8px">
+          <div id="vm-relatorio-atual" style="display:none;font-size:11px;color:var(--green);margin-top:5px">
+            📎 Relatório já anexado — selecione um novo para substituir.
+          </div>
+        </div>
       </div>
     </div>
     <input type="hidden" id="vm-lead-id">

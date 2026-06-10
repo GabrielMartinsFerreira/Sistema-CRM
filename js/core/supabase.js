@@ -21,8 +21,9 @@ const TABLES = {
   VARIAVEIS:      'crm_gastos_variaveis',
   MOVIMENTACOES:  'financeiro_movimentacoes',
   CATEGORIAS:     'crm_categorias',
-  COMPRAS_FORN:   'compras_fornecedores_os',
-  BOLETOS_FORN:   'boletos_fornecedores'
+  COMPRAS_FORN:      'compras_fornecedores_os',
+  BOLETOS_FORN:      'boletos_fornecedores',
+  METODOS_PAGAMENTO: 'crm_metodos_pagamento'
 };
 const STORAGE_BUCKET = 'relatorios-tecnicos';
 

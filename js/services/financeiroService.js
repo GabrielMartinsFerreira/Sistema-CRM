@@ -68,6 +68,20 @@ const financeiroService = {
     return db.from(TABLES.CATEGORIAS).update({ativo:false}).eq('id',id);
   },
 
+  /* ─────────── MÉTODOS DE PAGAMENTO DINÂMICOS ─────────── */
+  carregarMetodos(){
+    return db.from(TABLES.METODOS_PAGAMENTO).select('*').eq('ativo',true).order('ordem',{ascending:true});
+  },
+  inserirMetodo(dados){
+    return db.from(TABLES.METODOS_PAGAMENTO).insert([dados]).select().single();
+  },
+  atualizarMetodo(id,upd){
+    return db.from(TABLES.METODOS_PAGAMENTO).update(upd).eq('id',id);
+  },
+  deletarMetodo(id){
+    return db.from(TABLES.METODOS_PAGAMENTO).update({ativo:false}).eq('id',id);
+  },
+
   /* Soma de Saídas para um array de lead_ids */
   calcSaidas(movimentacoes, leadIds){
     const ids = new Set(leadIds);

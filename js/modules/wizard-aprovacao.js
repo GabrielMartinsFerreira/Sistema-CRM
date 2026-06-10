@@ -97,6 +97,13 @@ function toggleVisitaFields(){
   const statusVal = document.getElementById('vm-status').value;
   document.getElementById('btn-visita-concluida').style.display =
     (nec && statusVal !== 'Concluída') ? '' : 'none';
+  toggleVisitaRelatorio();
+}
+function toggleVisitaRelatorio(){
+  const nec     = document.getElementById('vm-necessaria').checked;
+  const status  = document.getElementById('vm-status')?.value || '';
+  const wrap    = document.getElementById('vm-relatorio-wrap');
+  if(wrap) wrap.style.display = (nec && status === 'Concluída') ? '' : 'none';
 }
 
 function abrirVisitaModal(id){
@@ -112,6 +119,12 @@ function abrirVisitaModal(id){
   document.getElementById('vm-fields').style.display = nec ? 'block' : 'none';
   document.getElementById('btn-visita-concluida').style.display =
     (nec && (l.visita_status || '') !== 'Concluída') ? '' : 'none';
+  // Mostra indicador de relatório já anexado
+  const relAtual = document.getElementById('vm-relatorio-atual');
+  const relFile  = document.getElementById('vm-relatorio-file');
+  if(relAtual) relAtual.style.display = l.visita_relatorio_path ? 'block' : 'none';
+  if(relFile) relFile.value = '';
+  toggleVisitaRelatorio();
   document.getElementById('visita-modal').classList.add('open');
 }
 
@@ -121,12 +134,27 @@ async function salvarVisita(){
   btn.disabled = true; btn.textContent = 'Salvando…';
   const nec        = document.getElementById('vm-necessaria').checked;
   const visitaData = nec ? (document.getElementById('vm-data').value || null) : null;
+  const statusVisita = nec ? document.getElementById('vm-status').value : 'Pendente';
   const dados = {
     visita_necessaria: nec,
     visita_data:       visitaData,
     visita_horario:    nec ? (document.getElementById('vm-horario').value || null) : null,
-    visita_status:     nec ? document.getElementById('vm-status').value : 'Pendente'
+    visita_status:     statusVisita
   };
+  // Upload do relatório técnico da visita quando status = Concluída
+  const relFile = document.getElementById('vm-relatorio-file');
+  if(relFile && relFile.files[0] && statusVisita === 'Concluída'){
+    const file = relFile.files[0];
+    if(file.size > 10*1024*1024){ toast('Arquivo muito grande — máx. 10 MB','err'); btn.disabled=false; btn.textContent='💾 Salvar'; return; }
+    try{
+      btn.textContent = 'Enviando relatório…';
+      const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
+      const path = id + '/visita_relatorio_' + Date.now() + '.' + ext;
+      const { error: upErr } = await crmService.uploadRelatorio(path, file, file.type);
+      if(upErr) throw new Error('Upload: ' + upErr.message);
+      dados.visita_relatorio_path = path;
+    }catch(e){ toast('Erro no upload: ' + e.message, 'err'); btn.disabled=false; btn.textContent='💾 Salvar'; return; }
+  }
   try{
     const { error } = await crmService.atualizarLead(id, dados);
     if(error) throw error;
@@ -145,14 +173,16 @@ async function marcarVisitaConcluida(){
   const id  = parseInt(document.getElementById('vm-lead-id').value); if(!id) return;
   const btn = document.getElementById('btn-visita-concluida');
   btn.disabled = true; btn.textContent = 'Salvando…';
-  try{
-    const { error } = await crmService.atualizarLead(id, { visita_status: 'Concluída' });
-    if(error) throw error;
-    toast('✅ Visita marcada como Concluída!');
-    fecharModal('visita-modal', true);
-    await carregarDados();
-  }catch(e){ toast('Erro: ' + e.message, 'err'); }
-  finally{ btn.disabled = false; btn.textContent = '✓ Marcar como Realizada'; }
+  // Muda o status para Concluída e mostra o campo de relatório em vez de salvar imediatamente
+  const statusSel = document.getElementById('vm-status');
+  if(statusSel) statusSel.value = 'Concluída';
+  btn.style.display = 'none';
+  toggleVisitaRelatorio();
+  btn.disabled = false; btn.textContent = '✓ Marcar como Realizada';
+  // Foca no input de arquivo para facilitar o upload
+  const relFile = document.getElementById('vm-relatorio-file');
+  if(relFile){ relFile.click(); }
+  // O usuário clica em "💾 Salvar" após selecionar (ou não) o arquivo
 }
 
 
@@ -906,6 +936,12 @@ async function confirmarAprovacao(){
 
     // Persiste parcelas (com datas de vencimento) na coluna JSONB leads.parcelas
     dados.parcelas = _wizParcelas;
+
+    // Herança automática: se visita tinha relatório e wizard não anexou nenhum, herda
+    const leadAtual = allLeads.find(l => l.id === id);
+    if(!_wizAnexo && leadAtual && leadAtual.visita_relatorio_path){
+      dados.relatorio_tecnico_url = leadAtual.visita_relatorio_path;
+    }
 
     // Upload do relatório técnico para o Storage PRIVADO (bucket relatorios-tecnicos)
     if(_wizAnexo && _wizAnexo.file){

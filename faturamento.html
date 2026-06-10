@@ -707,13 +707,14 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
   <!-- Tabs -->
   <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px">
-    <button id="mc-tab-fixo" onclick="setCatTab('fixo')" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid var(--orange);color:var(--orange);font-family:'DM Sans',sans-serif;margin-bottom:-1px">🏢 Despesas Fixas</button>
-    <button id="mc-tab-variavel" onclick="setCatTab('variavel')" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;margin-bottom:-1px">📉 Despesas Variáveis</button>
+    <button id="mc-tab-fixo" onclick="setCatTab('fixo')" style="padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid var(--orange);color:var(--orange);font-family:'DM Sans',sans-serif;margin-bottom:-1px">🏢 Despesas Fixas</button>
+    <button id="mc-tab-variavel" onclick="setCatTab('variavel')" style="padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;margin-bottom:-1px">📉 Despesas Variáveis</button>
+    <button id="mc-tab-metodo" onclick="setCatTab('metodo')" style="padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;margin-bottom:-1px">💳 Métodos Pagto</button>
   </div>
   <!-- Lista -->
   <div id="mc-lista" style="max-height:320px;overflow-y:auto;margin-bottom:14px"></div>
-  <!-- Form Adicionar -->
-  <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+  <!-- Form Adicionar — categorias -->
+  <div id="mc-form-cat" style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
     <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">➕ Adicionar nova categoria</div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">
       <div>
@@ -730,6 +731,21 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
         </select>
       </div>
       <button class="btn btn-primary" onclick="adicionarCategoria()" style="height:40px;white-space:nowrap;background:var(--green);color:#0c0e16">+ Adicionar</button>
+    </div>
+  </div>
+  <!-- Form Adicionar — métodos de pagamento -->
+  <div id="mc-form-metodo" style="display:none;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">➕ Adicionar novo método de pagamento</div>
+    <div style="display:grid;grid-template-columns:60px 1fr auto;gap:8px;align-items:end">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Emoji</label>
+        <input type="text" id="mc-metodo-emoji" class="form-control" placeholder="💳" style="font-size:18px;text-align:center" maxlength="4">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Nome</label>
+        <input type="text" id="mc-metodo-nome" class="form-control" placeholder="Ex: Bradesco" style="font-size:13px" onkeydown="if(event.key==='Enter')adicionarMetodo()">
+      </div>
+      <button class="btn btn-primary" onclick="adicionarMetodo()" style="height:40px;white-space:nowrap;background:var(--accent);color:#fff">+ Adicionar</button>
     </div>
   </div>
   <div class="modal-footer">
@@ -969,6 +985,7 @@ async function carregar(){
     popularCatVariavel();
     await loadGastosFixosDB();
     await loadVariaveisDB();
+    carregarMetodosPag(); // não aguarda — renderiza selects quando resolver
     await garantirSeriesDoAno(anoAtual);
     atualizarNavMesFat();
     renderPorMes();
@@ -1422,19 +1439,31 @@ function abrirOsCard(leadId){
       </tbody>
     </table>
     </div>`:'';
-  const anexoIsPdf=anexoUrl&&anexoUrl.toLowerCase().split('?')[0].endsWith('.pdf');
-  const tecBlock=anexoUrl?`
+  const anexoIsPdf = anexoUrl && anexoUrl.toLowerCase().split('?')[0].endsWith('.pdf');
+  const tecBlock=`
     <div id="oc-tec-block">
     <div class="oc-section">📎 Relatório Técnico</div>
-    <div class="oc-anexo-block">
-      <span class="oc-anexo-icon">${anexoIsPdf?'📕':'🖼️'}</span>
-      <div class="oc-anexo-info">
-        <div class="oc-anexo-name">Relatório Técnico do Pedido</div>
-        <div class="oc-anexo-size">Armazenado no Supabase Storage</div>
-      </div>
-      <button class="btn-open-anexo" onclick="abrirAnexoTecnico('${esc(anexoUrl)}')">📂 Abrir</button>
-    </div>
-    </div>`:'';
+    ${anexoUrl
+      ? `<div class="oc-anexo-block">
+          <span class="oc-anexo-icon">${anexoIsPdf?'📕':'🖼️'}</span>
+          <div class="oc-anexo-info">
+            <div class="oc-anexo-name">Relatório Técnico do Pedido</div>
+            <div class="oc-anexo-size">Armazenado no Supabase Storage (privado)</div>
+          </div>
+          <button class="btn-open-anexo" onclick="abrirAnexoTecnico('${esc(anexoUrl)}')">📂 Abrir</button>
+         </div>`
+      : `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-card2);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:14px 16px">
+          <div>
+            <div style="font-size:13px;color:var(--text-muted)">Nenhum relatório técnico anexado.</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Formatos aceitos: PDF, JPG, PNG — máx. 10 MB</div>
+          </div>
+          <label style="cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:6px">
+            📎 Anexar
+            <input type="file" accept="image/*,application/pdf" style="display:none" onchange="anexarRelatorioOsCard(${p.id},this)">
+          </label>
+         </div>`
+    }
+    </div>`;
 
   const html=`
     <div class="oc-section" style="margin-top:0;padding-top:0;border-top:none">📋 Identificação do Pedido</div>
@@ -1489,6 +1518,33 @@ async function abrirAnexoTecnico(ref){
   const win=window.open(url,'_blank','noopener,noreferrer');
   if(!win){ toast('Pop-up bloqueado — permita pop-ups neste site para abrir o relatório','err'); return; }
 }
+async function anexarRelatorioOsCard(leadId, fileInput){
+  const file = fileInput ? fileInput.files[0] : null;
+  if(!file) return;
+  if(file.size > 10*1024*1024){ toast('Arquivo muito grande — máx. 10 MB','err'); return; }
+  const label = fileInput.parentElement;
+  const origText = label.textContent.trim();
+  label.style.pointerEvents = 'none';
+  label.style.opacity = '0.7';
+  try{
+    const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
+    const path = leadId + '/relatorio_' + Date.now() + '.' + ext;
+    const { error: upErr } = await crmService.uploadRelatorio(path, file, file.type);
+    if(upErr) throw new Error('Upload: ' + upErr.message);
+    const { error } = await crmService.atualizarLead(leadId, { relatorio_tecnico_url: path });
+    if(error) throw error;
+    const p = _allPedidosBrutos.find(x => x.id === leadId);
+    if(p) p.relatorio_tecnico_url = path;
+    toast('✅ Relatório técnico anexado!');
+    fecharOsCard();
+    abrirOsCard(leadId);
+  }catch(e){
+    toast('Erro ao anexar: ' + e.message, 'err');
+    label.style.pointerEvents = '';
+    label.style.opacity = '';
+  }
+}
+
 function fecharOsCard(){
   document.getElementById('os-card-modal').classList.remove('open');
   resetTogglesPrint();
@@ -1614,13 +1670,20 @@ function fecharModalCategorias(){
 }
 function setCatTab(tipo){
   _mcTabAtual=tipo;
-  const isFix=tipo==='fixo';
+  const isFix=tipo==='fixo', isVar=tipo==='variavel', isMet=tipo==='metodo';
   const tbFix=document.getElementById('mc-tab-fixo');
   const tbVar=document.getElementById('mc-tab-variavel');
+  const tbMet=document.getElementById('mc-tab-metodo');
   if(tbFix){tbFix.style.borderBottomColor=isFix?'var(--orange)':'transparent';tbFix.style.color=isFix?'var(--orange)':'var(--text-muted)';}
-  if(tbVar){tbVar.style.borderBottomColor=!isFix?'var(--accent)':'transparent';tbVar.style.color=!isFix?'var(--accent)':'var(--text-muted)';}
+  if(tbVar){tbVar.style.borderBottomColor=isVar?'var(--accent)':'transparent';tbVar.style.color=isVar?'var(--accent)':'var(--text-muted)';}
+  if(tbMet){tbMet.style.borderBottomColor=isMet?'var(--blue)':'transparent';tbMet.style.color=isMet?'var(--blue)':'var(--text-muted)';}
+  const formCat=document.getElementById('mc-form-cat');
+  const formMet=document.getElementById('mc-form-metodo');
+  if(formCat) formCat.style.display=isMet?'none':'';
+  if(formMet) formMet.style.display=isMet?'':'none';
   document.getElementById('mc-grupo-wrap').style.display=isFix?'':'none';
-  renderListaCategorias();
+  if(isMet) renderListaMetodos();
+  else renderListaCategorias();
 }
 function renderListaCategorias(){
   const wrap=document.getElementById('mc-lista');
@@ -1676,6 +1739,8 @@ async function adicionarCategoria(){
   if(!nome){document.getElementById('mc-nome').focus();return;}
   const grupo=_mcTabAtual==='fixo'?(document.getElementById('mc-grupo').value||null):null;
   const ordem=_categoriasCache.filter(c=>c.tipo===_mcTabAtual).length+1;
+  /* Note: _mcTabAtual never equals 'metodo' here because adicionarCategoria()
+     is only called from mc-form-cat; métodos are handled by adicionarMetodo() */
   const dados={tipo:_mcTabAtual,nome,grupo,padrao:false,ativo:true,ordem};
   const{data,error}=await financeiroService.inserirCategoria(dados);
   if(error){toast('Erro: '+error.message,'err');return;}
@@ -1685,6 +1750,85 @@ async function adicionarCategoria(){
   atualizarItensGF();
   popularCatVariavel();
   toast('Categoria adicionada!','ok');
+}
+
+/* ═══ MÉTODOS DE PAGAMENTO DINÂMICOS ═══ */
+let _metodosPagCache=[];
+
+async function carregarMetodosPag(){
+  try{
+    const{data,error}=await financeiroService.carregarMetodos();
+    if(error){ console.warn('[MetodosPag]',error.message); return; }
+    _metodosPagCache=data||[];
+  }catch(e){ console.warn('[MetodosPag]',e.message); }
+  popularSelectsMetodos();
+}
+
+function popularSelectsMetodos(){
+  if(!_metodosPagCache.length) return;
+  const optsFull=_metodosPagCache.map(m=>`<option value="${esc(m.nome)}">${esc(m.emoji||'')} ${esc(m.nome)}</option>`).join('');
+  const optsBlank=`<option value="">—</option>`+optsFull;
+  const optsSelect=`<option value="">Selecione…</option>`+optsFull;
+  [['gf-forma',optsBlank],['gfe-forma',optsBlank]].forEach(([id,opts])=>{
+    const el=document.getElementById(id); if(!el) return;
+    const prev=el.value; el.innerHTML=opts; if(prev) el.value=prev;
+  });
+  const gfp=document.getElementById('gfp-forma');
+  if(gfp){ const prev=gfp.value; gfp.innerHTML=optsSelect; if(prev) gfp.value=prev; }
+}
+
+function renderListaMetodos(){
+  const wrap=document.getElementById('mc-lista'); if(!wrap) return;
+  if(!_metodosPagCache.length){
+    wrap.innerHTML='<div class="empty-msg" style="padding:20px">Nenhum método cadastrado.<br><small style="font-size:11px;color:var(--text-muted)">Execute a migration SQL para adicionar os métodos padrão.</small></div>';
+    return;
+  }
+  wrap.innerHTML=_metodosPagCache.map(m=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid rgba(37,40,64,.5)">
+      <span style="font-size:20px;width:28px;text-align:center">${esc(m.emoji||'💳')}</span>
+      <span style="flex:1;font-size:13px;font-weight:600">${esc(m.nome)}</span>
+      <button class="btn-gf-del" onclick="editarMetodo(${m.id},'${esc(m.nome).replace(/'/g,"\\'")}','${esc(m.emoji||'').replace(/'/g,"\\'")}')">✏️</button>
+      <button class="btn-gf-del" onclick="deletarMetodoPag(${m.id})">🗑</button>
+    </div>`).join('');
+}
+
+function editarMetodo(id, nomeAtual, emojiAtual){
+  const novoNome=prompt('Nome do método:',nomeAtual);
+  if(!novoNome||novoNome.trim()===nomeAtual) return;
+  const novoEmoji=prompt('Emoji (ex: 🟧):',emojiAtual)||'💳';
+  financeiroService.atualizarMetodo(id,{nome:novoNome.trim(),emoji:novoEmoji.trim()}).then(({error})=>{
+    if(error){toast('Erro: '+error.message,'err');return;}
+    const m=_metodosPagCache.find(x=>x.id===id);
+    if(m){m.nome=novoNome.trim();m.emoji=novoEmoji.trim();}
+    renderListaMetodos();
+    popularSelectsMetodos();
+    toast('Método atualizado','ok');
+  });
+}
+
+async function deletarMetodoPag(id){
+  if(!confirm('Remover este método de pagamento?')) return;
+  const{error}=await financeiroService.deletarMetodo(id);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  _metodosPagCache=_metodosPagCache.filter(m=>m.id!==id);
+  renderListaMetodos();
+  popularSelectsMetodos();
+  toast('Método removido','ok');
+}
+
+async function adicionarMetodo(){
+  const nome=document.getElementById('mc-metodo-nome').value.trim();
+  if(!nome){document.getElementById('mc-metodo-nome').focus();return;}
+  const emoji=document.getElementById('mc-metodo-emoji').value.trim()||'💳';
+  const ordem=_metodosPagCache.length+1;
+  const{data,error}=await financeiroService.inserirMetodo({nome,emoji,ativo:true,ordem});
+  if(error){toast('Erro: '+error.message,'err');return;}
+  if(data) _metodosPagCache.push(data);
+  document.getElementById('mc-metodo-nome').value='';
+  document.getElementById('mc-metodo-emoji').value='';
+  renderListaMetodos();
+  popularSelectsMetodos();
+  toast('Método adicionado!','ok');
 }
 
 async function adicionarGasto(){
