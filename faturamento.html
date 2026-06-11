@@ -471,7 +471,10 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   <div class="card">
     <div class="section-title" style="justify-content:space-between">
       <span>🏢 Despesas Fixas do Mês</span>
-      <span id="gf-total-badge" style="font-family:'DM Mono',monospace;color:var(--orange);font-size:14px;font-weight:700"></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="abrirSeriesModal()" title="Ver e gerenciar todas as séries recorrentes" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card2);color:var(--text-muted);cursor:pointer;white-space:nowrap">🔁 Séries Ativas</button>
+        <span id="gf-total-badge" style="font-family:'DM Mono',monospace;color:var(--orange);font-size:14px;font-weight:700"></span>
+      </div>
     </div>
     <div id="gf-table-wrap"><div class="empty-msg">Nenhum gasto lançado para este mês.</div></div>
   </div>
@@ -896,6 +899,23 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     <div id="audit-content"></div>
     <div class="modal-footer">
       <button class="btn btn-cancel-modal" onclick="fecharAuditModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SÉRIES RECORRENTES -->
+<div class="modal-overlay" id="series-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <div class="modal-title" style="flex-direction:column;align-items:flex-start;gap:2px">
+        <span>🔁 Séries Recorrentes Ativas</span>
+        <span style="font-size:11px;color:var(--text-muted);font-weight:400">Gastos lançados com recorrência automática — agrupa por série</span>
+      </div>
+      <button class="btn-modal-close" onclick="fecharSeriesModal()">✕</button>
+    </div>
+    <div id="series-modal-content" style="min-height:80px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharSeriesModal()">Fechar</button>
     </div>
   </div>
 </div>
@@ -1831,6 +1851,103 @@ async function adicionarMetodo(){
   toast('Método adicionado!','ok');
 }
 
+/* ═══ GESTÃO DE SÉRIES RECORRENTES ═══════════════════════════════════ */
+const MESES_NOMES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function abrirSeriesModal(){
+  document.getElementById('series-modal').classList.add('open');
+  renderSeriesModal();
+}
+function fecharSeriesModal(){
+  document.getElementById('series-modal').classList.remove('open');
+}
+
+function renderSeriesModal(){
+  const wrap=document.getElementById('series-modal-content');
+  if(!wrap) return;
+
+  // Agrupa _gastosCache por serie_id (ignora gastos sem série)
+  const mapa={};
+  _gastosCache.forEach(g=>{
+    if(!g.serie_id) return;
+    if(!mapa[g.serie_id]) mapa[g.serie_id]={serie_id:g.serie_id,nome:g.nome,categoria:g.categoria,valor:g.valor,itens:[]};
+    mapa[g.serie_id].itens.push(g);
+  });
+
+  const series=Object.values(mapa);
+  if(!series.length){
+    wrap.innerHTML='<div class="empty-msg" style="padding:28px">Nenhuma série recorrente encontrada.<br><span style="font-size:11px">Gastos lançados com "Replicar" marcado aparecerão aqui.</span></div>';
+    return;
+  }
+
+  // Ordena por valor desc para facilitar localizar o maior
+  series.sort((a,b)=>b.valor-a.valor);
+
+  const rows=series.map(s=>{
+    const anos=[...new Set(s.itens.map(x=>x.ano))].sort();
+    const pagos=s.itens.filter(g=>isPago(g)).length;
+    const total=s.valor*s.itens.length;
+    const pendTotal=s.valor*(s.itens.length-pagos);
+    // Monta intervalo de meses legível
+    const byAno=anos.map(a=>{
+      const mesesAno=s.itens.filter(x=>x.ano===a).map(x=>x.mes).sort((a,b)=>a-b);
+      const de=MESES_NOMES[mesesAno[0]];
+      const ate=MESES_NOMES[mesesAno[mesesAno.length-1]];
+      return de===ate ? `${de}/${a}` : `${de}→${ate}/${a}`;
+    }).join(' + ');
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg-card2);border-radius:9px;border:1px solid var(--border);margin-bottom:7px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${esc(s.nome)}</span>
+          <span style="font-size:10px;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 6px">${esc(s.categoria||'—')}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+          📅 ${byAno} &nbsp;·&nbsp; ${s.itens.length} mês(es) &nbsp;·&nbsp; ${pagos} pago${pagos!==1?'s':''}
+        </div>
+        <div style="margin-top:5px;display:flex;gap:12px;flex-wrap:wrap">
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--orange);font-weight:700">${brl(s.valor)}/mês</span>
+          <span style="font-size:11px;color:var(--text-muted)">Total: ${brl(total)}</span>
+          ${pendTotal>0?`<span style="font-size:11px;color:var(--red)">Pendente: ${brl(pendTotal)}</span>`:'<span style="font-size:11px;color:var(--green)">✓ Tudo pago</span>'}
+        </div>
+      </div>
+      <button onclick="excluirSerie('${esc(s.serie_id)}')"
+        style="padding:8px 12px;background:var(--red-dim);border:1px solid rgba(240,81,106,.3);border-radius:8px;color:var(--red);cursor:pointer;font-size:12px;font-weight:700;flex-shrink:0;white-space:nowrap;transition:.15s"
+        onmouseover="this.style.background='var(--red)';this.style.color='white'"
+        onmouseout="this.style.background='var(--red-dim)';this.style.color='var(--red)'">🗑 Excluir série</button>
+    </div>`;
+  }).join('');
+
+  const totalSeries=series.reduce((a,s)=>a+s.valor,0);
+  wrap.innerHTML=`
+    <div style="background:var(--yellow-dim);border:1px solid rgba(245,197,66,.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--yellow)">
+      ⚠️ <strong>${series.length} série(s) ativa(s)</strong> &nbsp;·&nbsp; impacto mensal total: <strong style="font-family:'DM Mono',monospace">${brl(totalSeries)}</strong>
+      <span style="color:var(--text-muted);margin-left:8px">— Exclua séries incorretas ou criadas por engano.</span>
+    </div>
+    ${rows}`;
+}
+
+async function excluirSerie(serieId){
+  const itens=_gastosCache.filter(x=>x.serie_id===serieId);
+  if(!itens.length) return;
+  const s=itens[0];
+  const pagos=itens.filter(g=>isPago(g)).length;
+  const msg=`Excluir toda a série "${s.nome}" (${itens.length} lançamentos, ${pagos} pago(s))?\n\nEsta ação não pode ser desfeita.`;
+  if(!confirm(msg)) return;
+  const ids=itens.map(x=>x.id);
+  try{
+    const{error}= ids.length>1
+      ? await financeiroService.deletarGastosIn(ids)
+      : await financeiroService.deletarGasto(ids[0]);
+    if(error) throw error;
+    _gastosCache=_gastosCache.filter(x=>!ids.includes(x.id));
+    toast(`🗑️ Série "${s.nome}" removida — ${ids.length} lançamento(s) excluído(s).`);
+    renderSeriesModal();
+    renderGastosFixos(); renderHealthDashboard(); renderFluxoSemanal();
+  }catch(e){ toast('Erro ao excluir série: '+e.message,'err'); }
+}
+/* ═══════════════════════════════════════════════════════════════════ */
+
 async function adicionarGasto(){
   const cat=document.getElementById('gf-cat').value.trim();
   const nome=document.getElementById('gf-nome').value.trim();
@@ -2429,7 +2546,7 @@ function imprimirDRE(){
   win.document.close();
 }
 
-['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal','dre-modal','modal-categorias'].forEach(id=>{
+['fat-modal','audit-modal','os-card-modal','gf-pay-modal','gf-edit-modal','dre-modal','modal-categorias','series-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)document.getElementById(id).classList.remove('open')});
 });
 window.onload=()=>{testeFaturamento();carregar();};
