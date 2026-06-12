@@ -124,13 +124,15 @@ const financeiroService = {
 
   /* DRE Oficial — matriz por mês (regime de competência) do ano informado.
    * Retorna arrays de 12 posições + acumulados. */
-  calcDRE(pedidos, fatMap, gastos, ano, aliq=0, variaveis=[]){
+  calcDRE(pedidos, fatMap, gastos, ano, aliq=0, variaveis=[], comprasMap={}){
     const bruto=Array(12).fill(0), custos=Array(12).fill(0), fixos=Array(12).fill(0);
     (pedidos||[]).forEach(p=>{
       if(this._anoDe(p.data_aprovacao)!==ano) return;
       const m=this._mesDe(p.data_aprovacao); if(m<0) return;
       bruto[m]+=parseFloat(p.valor||0);
       if(fatMap[p.id]) custos[m]+=this.calcDeducoes(fatMap[p.id]);
+      // Custos Reais de Compras (boletos de fornecedores da OS — competência)
+      custos[m]+=parseFloat((comprasMap||{})[p.id]||0);
     });
     // Gastos variáveis entram nos Custos de Obras (regime de competência)
     (variaveis||[]).forEach(v=>{ if(v.ano===ano && v.mes>=0 && v.mes<12) custos[v.mes]+=parseFloat(v.valor||0); });
@@ -160,18 +162,20 @@ const financeiroService = {
 
   /* Resumo financeiro do mês (para health dashboard e breakeven).
    * custosObras consolida deduções das OS + Gastos Variáveis do mês. */
-  calcResumoMes(pedidos, fatMap, gastos, mes, ano, variaveis=[]){
+  calcResumoMes(pedidos, fatMap, gastos, mes, ano, variaveis=[], comprasMap={}){
     const doMes = (pedidos||[]).filter(p=>this._mesDe(p.data_aprovacao)===mes && this._anoDe(p.data_aprovacao)===ano);
     const receita = doMes.reduce((a,b)=>a+parseFloat(b.valor||0),0);
     const deducoesOS  = doMes.reduce((a,p)=>a+(fatMap[p.id]?this.calcDeducoes(fatMap[p.id]):0),0);
+    // Custos Reais de Compras (boletos de fornecedores das OS do mês)
+    const comprasMes = doMes.reduce((a,p)=>a+parseFloat((comprasMap||{})[p.id]||0),0);
     const variaveisMes = this.calcVariaveisMes(variaveis, mes, ano);
-    const custosObras = deducoesOS + variaveisMes;
+    const custosObras = deducoesOS + variaveisMes + comprasMes;
     const gMes = (gastos||[]).filter(g=>g.mes===mes && g.ano===ano);
     const fixosPagos     = gMes.filter(g=>this.ehPago(g)).reduce((a,b)=>a+parseFloat(b.valor||0),0);
     const fixosPendentes = gMes.filter(g=>!this.ehPago(g)).reduce((a,b)=>a+parseFloat(b.valor||0),0);
     const fixos = fixosPagos + fixosPendentes;
     return {
-      receita, deducoesOS, variaveisMes, custosObras, fixosPagos, fixosPendentes, fixos,
+      receita, deducoesOS, variaveisMes, comprasMes, custosObras, fixosPagos, fixosPendentes, fixos,
       margem: receita - custosObras,
       lucroReal: receita - custosObras - fixosPagos,
       lucroProjetado: receita - custosObras - fixos,

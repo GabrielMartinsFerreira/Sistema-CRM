@@ -31,15 +31,20 @@ js/
 │   └── auth.js         # Supabase Auth: tela de login + window.authGate() + botão Sair
 ├── services/
 │   ├── crmService.js          # TODAS as queries de leads/clientes/storage
-│   └── financeiroService.js   # dados de pedidos/faturamento/gastos + MATEMÁTICA PURA (DRE, breakeven, fluxo, resumo)
+│   ├── financeiroService.js   # dados de pedidos/faturamento/gastos + MATEMÁTICA PURA (DRE, breakeven, fluxo, resumo)
+│   └── comprasService.js      # fornecedores por OS + boletos + view relatorio_despesas_os
 └── modules/
-    └── wizard-aprovacao.js    # UI de visita + cadastro técnico + wizard de aprovação (3 passos)
+    ├── wizard-aprovacao.js    # UI de visita + cadastro técnico + wizard de aprovação (3 passos)
+    └── ficha-pdf.js           # Ficha de Pedido PDF 3 páginas (html2canvas + jsPDF) — só no faturamento
 ```
-**Ordem de carga:** utils → supabase → **auth** → crmService → financeiroService → script inline → (wizard, só no index).
+**Ordem de carga:** utils → supabase → **auth** → crmService → financeiroService → (comprasService) → script inline → (wizard, só no index; ficha-pdf, só no faturamento).
+**CDNs:** apenas `cdn.jsdelivr.net` (CSP do vercel.json) — Chart.js, html2canvas@1.4.1, jspdf@2.5.1.
 **Regra de ouro:** scripts clássicos compartilham escopo global; nunca redeclarar `db`/`const` do core dentro do inline (causa SyntaxError). Nenhuma chamada `db.from`/`createClient` deve existir nos HTML — tudo passa pelos serviços.
 
 ### 2.3 Banco de dados (Supabase)
-- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, **`financeiro_movimentacoes`** (nova).
+- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, `financeiro_movimentacoes`, **`compras_fornecedores_os`** (fornecedores vinculados à OS, FK→leads CASCADE), **`boletos_fornecedores`** (boletos por fornecedor, status Pendente/Pago/Atrasado, FK→compras CASCADE).
+- **View `relatorio_despesas_os`** (com `security_invoker = true` — respeita RLS): agrega por OS qtd fornecedores, total lançado/pago/pendente/atrasado, lucro bruto e margem %. Função `atualizar_boletos_atrasados()` marca vencidos.
+- **Campos da Ficha PDF em `leads`:** `endereco_numero`, `cidade`, `estado`, `ficha_descritivo` (JSONB {item,vidro,estrutura,outros}), `ficha_foto1_path`, `ficha_foto2_path` (paths no bucket privado).
 - **Storage:** bucket **PRIVADO** `relatorios-tecnicos` (relatórios contêm PII → LGPD). A coluna `leads.relatorio_tecnico_url` guarda o **caminho**, não a URL; a leitura usa `createSignedUrl(path, 3600)` (URL temporária de 1h).
 - **Migração histórica:** `localStorage` foi 100% removido → tudo persiste no Supabase. Parcelas do wizard ficam em `leads.parcelas` (JSONB).
 - **Campos em `leads`:** `status_os` (TEXT, default 'Em andamento'), `motivo_congelamento` (TEXT), `visita_relatorio_path` (TEXT), `observacoes` (TEXT), `desconto_pct` (NUMERIC 5,2, default 0), `tecnico_responsavel` (TEXT), `midia_origem` (TEXT).
@@ -62,13 +67,17 @@ js/
   - **Recorrência por série (`serie_id`):** gasto fixo com "Replicar" gera a série do mês atual até dezembro (mesma `serie_id`); continua no virar do ano (`garantirSeriesDoAno`). **Editar/Excluir** abre diálogo de escopo: *Apenas este mês / Este e os próximos / Todos* (operações em massa **preservam meses já PAGOS**).
   - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal capturando **Data de Pagamento Real + Conta/Forma (Itaú/Nubank/Cartão Corporativo/Caixa Interno) + Comprovante**. O comprovante pode ser **upload de imagem/PDF do PIX** (vai p/ bucket privado `relatorios-tecnicos` prefixo `comprovantes/`, guarda o caminho; abre via signed URL com `abrirAnexoTecnico()`) ou um link colado.
   - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
-  - **Ficha OS:** o toggle "💳 Pagamentos" agora oculta também o **Valor do Contrato** (`#oc-valor-contrato`) na impressão.
+  - **Ficha OS → 📄 Gerar PDF** *(2026-06-12 — substituiu o window.print e os toggles de impressão)*: botão único abre o **modal pré-PDF** (`ficha-pdf-modal`) que confere/completa dados (contato, mídia, consultor, técnico, nº/cidade/UF, datas, descritivo técnico, 2 fotos) — **salva tudo no lead** e chama `gerarFichaPDF(pedido)` (`js/modules/ficha-pdf.js`). PDF de **3 páginas A4 landscape**: OS (cliente+pagamentos+instalação), Termo de Garantia, Relatório Técnico (descritivo+fotos+painel lateral rotacionado). Fotos: bucket privado → signed URL → base64. Logo opcional em `assets/icon-conceito.png` (oculta-se se ausente).
+  - **🛒 Custos Reais (Compras)** *(2026-06-12)*: boletos de fornecedores (`relatorio_despesas_os.total_despesas_lancadas`) entram **automaticamente** como dedução em: KPIs, tabela de obras (lucro/margem), Ficha OS (linha própria), Auditoria, Health Dashboard (`calcResumoMes` param `comprasMap`) e DRE (`calcDRE` param `comprasMap`). Mapa `_comprasMap[os_id]` carregado no `Promise.all` do `carregar()`.
 - **`pedidos.html`** *(nova, 2026-06-08)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). Três ações por linha:
   - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas com `valor_reais`, saldo, observações, relatório técnico) e "Editar" (todos os campos + **editor completo de parcelas** com dual-mode % / R$, barra de progresso em tempo real, add/remove linhas). Botões: **🗑 Excluir Pedido** e **🗑 Remover Relatório**. `salvarEdicao()` persiste parcelas normalizadas no JSONB `leads.parcelas`.
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
   - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
   - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (soma das Entradas em `financeiro_movimentacoes`) com barra de progresso, A Receber.
 - **`relatorios.html`** — Relatórios mensais (Chart.js): funil, vendedores, rankings, e o gráfico de **Breakeven** (receita × custos × gastos × lucro).
+- **`compras.html`** — **Compras & Fornecedores** com 2 abas:
+  - **📋 Compras por Obra:** accordion OS → fornecedores → boletos (CRUD completo); KPIs; modal de pagamento com comprovante (bucket privado + signed URL); `auto_org`.
+  - **💸 Contas a Pagar** *(2026-06-12)*: dashboard mobile-friendly — KPIs (A Pagar no Mês, **Atrasadas em destaque vermelho**, Vencem em 7 dias, Pago no Mês), gráficos Chart.js (doughnut por status + barras por fornecedor top 8), navegação por mês ‹ › + **filtro por dia específico de vencimento** + filtro de status. Lista em cards (sem scroll horizontal): atrasados com borda vermelha, "vence hoje" em amarelo, botão ✓ Pagar reutiliza o modal de pagamento. Status `Atrasado` derivado no front via `statusEfetivo()` (vencimento < hoje e não pago).
 
 ### 2.5 Módulo de Gastos Fixos (estrutura validada)
 - **Categorias de negócio (fixas):**

@@ -223,6 +223,48 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 #toast.err{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.4)}
 #toast.warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.45)}
 
+/* VIEW TABS */
+.view-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.view-tab{padding:11px 24px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:7px;margin-bottom:-1px}
+.view-tab:hover{color:var(--text)}
+.view-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+
+/* CONTAS A PAGAR — dashboard */
+.cap-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.cap-kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.cap-kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.cap-kpi.k-mes::before{background:var(--orange)}
+.cap-kpi.k-atr::before{background:var(--red)}
+.cap-kpi.k-prox::before{background:var(--yellow)}
+.cap-kpi.k-pago::before{background:var(--green)}
+.cap-kpi.destaque-atraso{border-color:rgba(240,81,106,.55);background:linear-gradient(135deg,var(--bg-card),rgba(240,81,106,.07))}
+.cap-kpi-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.cap-kpi-value{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.6px}
+.cap-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.cap-charts{display:grid;grid-template-columns:1fr 1.4fr;gap:14px;margin-bottom:20px}
+.cap-chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;min-width:0}
+.cap-chart-card h3{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin:0 0 12px}
+.cap-chart-wrap{position:relative;height:220px}
+.cap-mes-nav{display:flex;align-items:center;gap:10px}
+.cap-mes-nav button{background:var(--bg-card2);border:1px solid var(--border);border-radius:7px;color:var(--text);width:30px;height:30px;cursor:pointer;font-size:14px;line-height:1}
+.cap-mes-nav button:hover{border-color:var(--orange);color:var(--orange)}
+.cap-mes-label{font-size:13px;font-weight:700;min-width:130px;text-align:center}
+.cap-conta{display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:11px;padding:12px 14px;margin-bottom:8px;flex-wrap:wrap}
+.cap-conta.atrasado{border-color:rgba(240,81,106,.55);background:linear-gradient(135deg,var(--bg-card),rgba(240,81,106,.06))}
+.cap-conta.hoje{border-color:rgba(245,197,66,.55);background:linear-gradient(135deg,var(--bg-card),rgba(245,197,66,.05))}
+.cap-conta.pago{opacity:.62}
+.cap-conta-main{flex:1;min-width:150px}
+.cap-conta-forn{font-size:13px;font-weight:700}
+.cap-conta-det{font-size:11px;color:var(--text-muted);margin-top:2px}
+.cap-conta-valor{font-size:14px;font-weight:700;font-family:'DM Mono',monospace;white-space:nowrap}
+.cap-conta-venc{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;white-space:nowrap}
+.cap-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.cap-badge.b-pend{background:var(--yellow-dim);color:var(--yellow)}
+.cap-badge.b-atr{background:var(--red-dim);color:var(--red)}
+.cap-badge.b-pago{background:var(--green-dim);color:var(--green)}
+.cap-btn-pagar{background:var(--green);color:#0c0e16;border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cap-btn-pagar:hover{filter:brightness(1.1)}
+
 /* RESPONSIVE */
 @media(max-width:768px){
   body{padding:12px}
@@ -232,6 +274,11 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   .boletos-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .form-row,.form-row-3{grid-template-columns:1fr}
   .modal{max-width:96vw!important;width:96vw!important}
+  .view-tab{padding:9px 12px;font-size:12px}
+  .cap-charts{grid-template-columns:1fr}
+  .cap-kpi-row{grid-template-columns:1fr 1fr;gap:10px}
+  .cap-conta{gap:8px}
+  .cap-conta-main{flex-basis:100%}
 }
 </style>
 </head>
@@ -257,6 +304,13 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
 </header>
 
+<!-- VIEW TABS -->
+<div class="view-tabs">
+  <button class="view-tab active" id="tab-obras" onclick="setViewCompras('obras')">📋 Compras por Obra</button>
+  <button class="view-tab" id="tab-contas" onclick="setViewCompras('contas')">💸 Contas a Pagar</button>
+</div>
+
+<div id="view-obras">
 <!-- KPI ROW -->
 <div class="kpi-row">
   <div class="kpi-card kc-obras">
@@ -319,6 +373,88 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 
 <!-- LISTA DE OS -->
 <div id="lista-os"><div class="empty-msg">Carregando obras…</div></div>
+</div><!-- /view-obras -->
+
+
+<!-- ════════════════════════════════════════════
+     VIEW — CONTAS A PAGAR (Dashboard)
+════════════════════════════════════════════ -->
+<div id="view-contas" style="display:none">
+
+  <!-- Filtro temporal -->
+  <div class="card">
+    <div class="filter-bar" style="align-items:flex-end">
+      <div class="filter-group" style="flex:0">
+        <label>Mês de Vencimento</label>
+        <div class="cap-mes-nav">
+          <button onclick="capNavMes(-1)">‹</button>
+          <span class="cap-mes-label" id="cap-mes-label">—</span>
+          <button onclick="capNavMes(1)">›</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Vencimento em Dia Específico</label>
+        <input type="date" id="cap-dia" class="filter-input" onchange="renderContas()">
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="cap-status" class="filter-select" onchange="renderContas()">
+          <option value="">Todos</option>
+          <option value="Atrasado">🔴 Atrasados</option>
+          <option value="Pendente">🟡 Pendentes</option>
+          <option value="Pago">🟢 Pagos</option>
+        </select>
+      </div>
+      <button class="btn-clear-filter" onclick="capLimparFiltros()">✕ Limpar</button>
+    </div>
+  </div>
+
+  <!-- KPIs do mês -->
+  <div class="cap-kpi-row">
+    <div class="cap-kpi k-mes">
+      <div class="cap-kpi-label">A Pagar no Mês</div>
+      <div class="cap-kpi-value" id="cap-k-mes" style="color:var(--orange)">—</div>
+      <div class="cap-kpi-sub" id="cap-k-mes-sub">pendentes + atrasados</div>
+    </div>
+    <div class="cap-kpi k-atr" id="cap-kpi-atr">
+      <div class="cap-kpi-label">⚠️ Contas Atrasadas</div>
+      <div class="cap-kpi-value" id="cap-k-atr" style="color:var(--red)">—</div>
+      <div class="cap-kpi-sub" id="cap-k-atr-sub">vencidas e não pagas</div>
+    </div>
+    <div class="cap-kpi k-prox">
+      <div class="cap-kpi-label">Vencem em 7 dias</div>
+      <div class="cap-kpi-value" id="cap-k-prox" style="color:var(--yellow)">—</div>
+      <div class="cap-kpi-sub">próximos vencimentos</div>
+    </div>
+    <div class="cap-kpi k-pago">
+      <div class="cap-kpi-label">Pago no Mês</div>
+      <div class="cap-kpi-value" id="cap-k-pago" style="color:var(--green)">—</div>
+      <div class="cap-kpi-sub" id="cap-k-pago-sub">—</div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="cap-charts">
+    <div class="cap-chart-card">
+      <h3>📊 Distribuição por Status (mês)</h3>
+      <div class="cap-chart-wrap"><canvas id="cap-chart-status"></canvas></div>
+    </div>
+    <div class="cap-chart-card">
+      <h3>🏭 Gastos por Fornecedor (mês)</h3>
+      <div class="cap-chart-wrap"><canvas id="cap-chart-forn"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Lista de contas -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px">💸 Contas do Período</span>
+      <span class="result-count" id="cap-count"></span>
+    </div>
+    <div id="cap-lista"><div class="empty-msg">Carregando…</div></div>
+  </div>
+
+</div><!-- /view-contas -->
 
 
 <!-- ════════════════════════════════════════════
@@ -467,6 +603,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 </div>
 
 <!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="js/core/utils.js"></script>
 <script src="js/core/supabase.js"></script>
 <script src="js/core/auth.js"></script>
@@ -591,6 +728,7 @@ function renderTudo(){
   renderListaOS();
   const rc=document.getElementById('result-count');
   if(rc) rc.textContent=_filtered.length+' de '+_osData.length+' obra'+(_osData.length!==1?'s':'');
+  renderContas();   // mantém o dashboard de Contas a Pagar sincronizado
 }
 
 function renderKPIs(){
@@ -1187,6 +1325,190 @@ async function verComprovante(event, path){
   // Segurança: apenas https:// é permitido (previne javascript: / data:)
   if(!/^https:\/\//i.test(url)){toast('URL inválida ou protocolo não permitido','err');return;}
   window.open(url,'_blank','noopener,noreferrer');
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONTAS A PAGAR — dashboard consolidado de boletos
+═══════════════════════════════════════════════════════ */
+let _capView   = 'obras';
+let _capMes    = new Date().getMonth();   // 0-11
+let _capAno    = new Date().getFullYear();
+let _capChartStatus = null;
+let _capChartForn   = null;
+const CAP_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function setViewCompras(view){
+  _capView = view;
+  document.getElementById('view-obras').style.display  = view==='obras'  ? '' : 'none';
+  document.getElementById('view-contas').style.display = view==='contas' ? '' : 'none';
+  document.getElementById('tab-obras').className  = 'view-tab' + (view==='obras' ?' active':'');
+  document.getElementById('tab-contas').className = 'view-tab' + (view==='contas'?' active':'');
+  if(view==='contas') renderContas();
+}
+
+function capNavMes(delta){
+  _capMes += delta;
+  if(_capMes > 11){ _capMes = 0; _capAno++; }
+  if(_capMes < 0){ _capMes = 11; _capAno--; }
+  renderContas();
+}
+
+function capLimparFiltros(){
+  document.getElementById('cap-dia').value = '';
+  document.getElementById('cap-status').value = '';
+  _capMes = new Date().getMonth();
+  _capAno = new Date().getFullYear();
+  renderContas();
+}
+
+/* Achata _osData → lista de boletos com fornecedor + OS */
+function capFlattenBoletos(){
+  const out = [];
+  _osData.forEach(function(os){
+    (os.compras_fornecedores_os||[]).forEach(function(f){
+      (f.boletos_fornecedores||[]).forEach(function(b){
+        out.push({
+          boleto: b, fornId: f.id,
+          fornecedor: f.fornecedor_nome || '—',
+          osLabel: (os.os ? 'OS '+os.os : (os.codigo_orcamento||'OS?')),
+          cliente: os.razao_social || os.nome || '—',
+          status: comprasService.statusEfetivo(b)
+        });
+      });
+    });
+  });
+  return out;
+}
+
+function capVenceMes(b){
+  if(!b.data_vencimento) return false;
+  const [y,m] = b.data_vencimento.split('-');
+  return parseInt(y)===_capAno && (parseInt(m)-1)===_capMes;
+}
+
+function renderContas(){
+  const lbl = document.getElementById('cap-mes-label');
+  if(!lbl) return;                      // view ainda não montada
+  lbl.textContent = CAP_MESES[_capMes]+' / '+_capAno;
+
+  const todos = capFlattenBoletos();
+  const hoje  = new Date().toISOString().slice(0,10);
+  const seteDias = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+
+  /* ── KPIs do mês selecionado ── */
+  const doMes = todos.filter(function(x){ return capVenceMes(x.boleto); });
+  const aPagarMes = doMes.filter(function(x){ return x.status!=='Pago'; })
+    .reduce(function(s,x){ return s+parseFloat(x.boleto.valor||0); },0);
+  const pagoMes = doMes.filter(function(x){ return x.status==='Pago'; })
+    .reduce(function(s,x){ return s+parseFloat(x.boleto.valor||0); },0);
+  // Atrasadas: TODAS as vencidas não pagas (independente do mês navegado)
+  const atrasadas = todos.filter(function(x){ return x.status==='Atrasado'; });
+  const totalAtr = atrasadas.reduce(function(s,x){ return s+parseFloat(x.boleto.valor||0); },0);
+  const prox7 = todos.filter(function(x){
+    return x.status==='Pendente' && x.boleto.data_vencimento
+        && x.boleto.data_vencimento>=hoje && x.boleto.data_vencimento<=seteDias;
+  }).reduce(function(s,x){ return s+parseFloat(x.boleto.valor||0); },0);
+
+  document.getElementById('cap-k-mes').textContent = brl(aPagarMes);
+  document.getElementById('cap-k-mes-sub').textContent =
+    doMes.filter(function(x){return x.status!=='Pago';}).length+' conta(s) em aberto no mês';
+  document.getElementById('cap-k-atr').textContent = brl(totalAtr);
+  document.getElementById('cap-k-atr-sub').textContent = atrasadas.length+' boleto(s) vencido(s)';
+  document.getElementById('cap-kpi-atr').className = 'cap-kpi k-atr'+(totalAtr>0?' destaque-atraso':'');
+  document.getElementById('cap-k-prox').textContent = brl(prox7);
+  document.getElementById('cap-k-pago').textContent = brl(pagoMes);
+  const totMes = aPagarMes+pagoMes;
+  document.getElementById('cap-k-pago-sub').textContent =
+    totMes>0 ? Math.round(pagoMes/totMes*100)+'% do mês quitado' : 'sem lançamentos no mês';
+
+  /* ── Gráficos (Chart.js) ── */
+  if(typeof Chart !== 'undefined'){
+    const css = getComputedStyle(document.documentElement);
+    const cText = (css.getPropertyValue('--text-muted')||'#5c6080').trim();
+    // Doughnut por status
+    const stPend = doMes.filter(x=>x.status==='Pendente').reduce((s,x)=>s+parseFloat(x.boleto.valor||0),0);
+    const stAtr  = doMes.filter(x=>x.status==='Atrasado').reduce((s,x)=>s+parseFloat(x.boleto.valor||0),0);
+    if(_capChartStatus) _capChartStatus.destroy();
+    _capChartStatus = new Chart(document.getElementById('cap-chart-status'),{
+      type:'doughnut',
+      data:{ labels:['Pendente','Atrasado','Pago'],
+        datasets:[{ data:[stPend,stAtr,pagoMes],
+          backgroundColor:['#f5c542','#f0516a','#22d48f'], borderWidth:0 }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins:{ legend:{ position:'bottom', labels:{ color:cText, font:{size:11}, padding:12 } } } }
+    });
+    // Barras por fornecedor (top 8 do mês)
+    const porForn = {};
+    doMes.forEach(function(x){ porForn[x.fornecedor]=(porForn[x.fornecedor]||0)+parseFloat(x.boleto.valor||0); });
+    const fornArr = Object.entries(porForn).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(_capChartForn) _capChartForn.destroy();
+    _capChartForn = new Chart(document.getElementById('cap-chart-forn'),{
+      type:'bar',
+      data:{ labels:fornArr.map(f=>f[0]),
+        datasets:[{ data:fornArr.map(f=>f[1]), backgroundColor:'#fb923c', borderRadius:6, maxBarThickness:34 }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{
+          x:{ ticks:{ color:cText, font:{size:10} }, grid:{ display:false } },
+          y:{ ticks:{ color:cText, font:{size:10},
+                callback:function(v){ return 'R$ '+(v>=1000?(v/1000)+'k':v); } },
+              grid:{ color:'rgba(255,255,255,.05)' } }
+        } }
+    });
+  }
+
+  /* ── Lista de contas (filtros: dia específico > mês; status) ── */
+  const diaSel = document.getElementById('cap-dia').value;
+  const stSel  = document.getElementById('cap-status').value;
+  let lista = diaSel
+    ? todos.filter(function(x){ return x.boleto.data_vencimento===diaSel; })
+    : doMes;
+  if(stSel) lista = lista.filter(function(x){ return x.status===stSel; });
+  // Ordena: Atrasado → Pendente → Pago, depois por vencimento
+  lista.sort(function(a,b){
+    const pr = (STATUS_PRIO[a.status]??1)-(STATUS_PRIO[b.status]??1);
+    if(pr!==0) return pr;
+    return (a.boleto.data_vencimento||'9999').localeCompare(b.boleto.data_vencimento||'9999');
+  });
+
+  document.getElementById('cap-count').textContent =
+    lista.length+' conta'+(lista.length!==1?'s':'')+(diaSel?' em '+fmtDate(diaSel):' no mês');
+
+  const wrap = document.getElementById('cap-lista');
+  if(!lista.length){
+    wrap.innerHTML = '<div class="empty-msg">'+(diaSel
+      ? '📭 Nenhuma conta vence em '+fmtDate(diaSel)+'.'
+      : '📭 Nenhuma conta no período selecionado.')+'</div>';
+    return;
+  }
+  wrap.innerHTML = lista.map(function(x){
+    const b = x.boleto;
+    const venceHoje = x.status==='Pendente' && b.data_vencimento===hoje;
+    const cls = x.status==='Atrasado' ? 'atrasado' : venceHoje ? 'hoje' : x.status==='Pago' ? 'pago' : '';
+    const badge = x.status==='Pago'
+      ? '<span class="cap-badge b-pago">🟢 Pago</span>'
+      : x.status==='Atrasado'
+        ? '<span class="cap-badge b-atr">🔴 Atrasado</span>'
+        : venceHoje
+          ? '<span class="cap-badge b-pend">⚠️ Vence hoje</span>'
+          : '<span class="cap-badge b-pend">🟡 Pendente</span>';
+    return '<div class="cap-conta '+cls+'">'
+      + '<div class="cap-conta-main">'
+      +   '<div class="cap-conta-forn">'+esc(x.fornecedor)+'</div>'
+      +   '<div class="cap-conta-det">'+esc(x.osLabel)+' · '+esc(x.cliente)
+      +     (b.descricao?' · '+esc(b.descricao):'')+'</div>'
+      + '</div>'
+      + '<span class="cap-conta-venc">📅 '+(b.data_vencimento?fmtDate(b.data_vencimento):'—')+'</span>'
+      + '<span class="cap-conta-valor">'+brl(parseFloat(b.valor||0))+'</span>'
+      + badge
+      + (x.status!=='Pago'
+          ? '<button class="cap-btn-pagar" onclick="abrirModalPagar('+b.id+','+x.fornId+')">✓ Pagar</button>'
+          : (b.comprovante_url
+              ? '<a href="#" onclick="verComprovante(event,\''+esc(b.comprovante_url)+'\')" style="font-size:11px;color:var(--accent)">📎 Comprovante</a>'
+              : ''))
+      + '</div>';
+  }).join('');
 }
 
 /* ─── Overlay close on backdrop click ───────────────── */

@@ -17,7 +17,7 @@ const comprasService = {
     return db
       .from(TABLES.LEADS)
       .select(`
-        id, codigo_orcamento, nome, razao_social, nome_contato, produto,
+        id, codigo_orcamento, os, nome, razao_social, nome_contato, produto,
         vendedor, valor, status_os, data_aprovacao, periodo_obra,
         compras_fornecedores_os (
           id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo, auto_org,
@@ -37,7 +37,7 @@ const comprasService = {
     return db
       .from(TABLES.LEADS)
       .select(`
-        id, codigo_orcamento, nome, razao_social, nome_contato, produto,
+        id, codigo_orcamento, os, nome, razao_social, nome_contato, produto,
         vendedor, valor, status_os, data_aprovacao,
         compras_fornecedores_os (
           id, fornecedor_nome, contato, valor_total_previsto, observacao, data_vinculo, auto_org,
