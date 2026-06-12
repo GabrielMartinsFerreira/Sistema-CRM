@@ -685,6 +685,42 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
       <input type="date" id="aprov-prev-inst" class="form-control">
     </div>
   </div>
+  <!-- N2: Desconto Comercial -->
+  <div class="aprov-section-title">💰 Desconto Comercial</div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Desconto (%)</label>
+      <input type="number" id="aprov-desconto" class="form-control" min="0" max="100" step="1" placeholder="0" value="0" oninput="atualizarValorComDesconto()">
+    </div>
+    <div class="form-group">
+      <label>Valor Final (com desconto)</label>
+      <input type="text" id="aprov-valor-final" class="form-control aprov-readonly" readonly placeholder="—" style="font-weight:700;color:var(--green)">
+    </div>
+  </div>
+
+  <!-- N3 + N4: Técnico e Origem -->
+  <div class="aprov-section-title">🔧 Equipe e Origem</div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Técnico Responsável <span style="color:var(--red)">*</span></label>
+      <input type="text" id="aprov-tecnico" class="form-control" list="aprov-tecnico-list" placeholder="Nome do técnico responsável">
+      <datalist id="aprov-tecnico-list">
+        <option value="Carlos"><option value="João"><option value="Marcos"><option value="Paulo">
+      </datalist>
+    </div>
+    <div class="form-group">
+      <label>Mídia / Origem do Cliente</label>
+      <select id="aprov-midia" class="form-control">
+        <option value="">— Selecione (opcional) —</option>
+        <option value="Google">🔍 Google</option>
+        <option value="Instagram">📸 Instagram</option>
+        <option value="Facebook">📘 Facebook</option>
+        <option value="Indicação">🤝 Indicação</option>
+        <option value="Outros">✳️ Outros</option>
+      </select>
+    </div>
+  </div>
+
   <div class="wiz-save-client-row" id="wiz-save-client-row">
     <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text)">
       <input type="checkbox" id="wiz-salvar-cliente" style="accent-color:var(--accent);width:15px;height:15px">

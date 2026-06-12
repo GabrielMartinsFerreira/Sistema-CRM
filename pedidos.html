@@ -389,7 +389,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
       </div>
       <div class="form-group">
         <label>Valor do Contrato (R$)</label>
-        <input type="number" id="ed-valor" class="form-control" min="0" step="0.01">
+        <input type="number" id="ed-valor" class="form-control" min="0" step="1">
       </div>
     </div>
     <div class="form-row">
@@ -429,7 +429,35 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
       <label>Observações</label>
       <textarea id="ed-obs" class="form-control" rows="3" style="resize:vertical"></textarea>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Técnico Responsável</label>
+        <input type="text" id="ed-tecnico" class="form-control" list="ed-tecnico-list" placeholder="Nome do técnico">
+        <datalist id="ed-tecnico-list">
+          <option value="Carlos"><option value="João"><option value="Marcos"><option value="Paulo">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>Mídia / Origem</label>
+        <select id="ed-midia" class="form-control">
+          <option value="">— Selecione —</option>
+          <option value="Google">🔍 Google</option>
+          <option value="Instagram">📸 Instagram</option>
+          <option value="Facebook">📘 Facebook</option>
+          <option value="Indicação">🤝 Indicação</option>
+          <option value="Outros">✳️ Outros</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Desconto Aplicado (%)</label>
+        <input type="number" id="ed-desconto" class="form-control" min="0" max="100" step="1" placeholder="0">
+      </div>
+      <div class="form-group"></div>
+    </div>
     <div class="modal-footer">
+      <button class="btn" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3);margin-right:auto" onclick="excluirPedido(_editPedidoId)">🗑 Excluir Pedido</button>
       <button class="btn btn-cancel-modal" onclick="switchDetTab('view')">← Voltar</button>
       <button class="btn btn-save" id="btn-salvar-edicao" onclick="salvarEdicao()">💾 Salvar Alterações</button>
     </div>
@@ -1076,6 +1104,9 @@ function renderDetView(p){
       <div class="det-item"><div class="det-label">Prazo de Entrega</div><div class="det-value">${esc(p.prazo_entrega||'—')}</div></div>
       <div class="det-item"><div class="det-label">Prev. Instalação</div><div class="det-value">${fmtDate(p.prev_instalacao)}</div></div>
       <div class="det-item"><div class="det-label">Visita Técnica</div><div class="det-value">${p.visita_data?fmtDate(p.visita_data)+' — '+(p.visita_status||'Pendente'):'Não agendada'}</div></div>
+      ${p.tecnico_responsavel?`<div class="det-item"><div class="det-label">Técnico Responsável</div><div class="det-value">${esc(p.tecnico_responsavel)}</div></div>`:''}
+      ${p.midia_origem?`<div class="det-item"><div class="det-label">Mídia / Origem</div><div class="det-value">${esc(p.midia_origem)}</div></div>`:''}
+      ${p.desconto_pct>0?`<div class="det-item"><div class="det-label">Desconto Aplicado</div><div class="det-value" style="color:var(--green)">${parseFloat(p.desconto_pct||0).toFixed(0)}%</div></div>`:''}
     </div>
 
     <div class="det-section">⚙️ Status da OS</div>
@@ -1093,6 +1124,18 @@ function renderDetView(p){
 
     <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">💳 Parcelas Contratadas</div>
     ${pagHtml}
+
+    ${p.observacoes?`
+    <div class="det-section" style="margin-top:14px">📝 Observações</div>
+    <div style="font-size:13px;color:var(--text);padding:6px 0;white-space:pre-wrap;line-height:1.6">${esc(p.observacoes)}</div>`:''}
+
+    <div class="det-section" style="margin-top:14px">📎 Relatório Técnico</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;flex-wrap:wrap">
+      ${p.relatorio_tecnico_url
+        ?`<button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="abrirComprovante('${esc(p.relatorio_tecnico_url)}')">🔗 Ver Relatório</button>
+           <button class="btn" style="font-size:12px;padding:6px 14px;background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)" onclick="removerRelatorio(${p.id})">🗑 Remover</button>`
+        :`<span style="font-size:12px;color:var(--text-muted)">Sem relatório técnico anexado.</span>`}
+    </div>
   `;
 }
 
@@ -1101,7 +1144,7 @@ function preencherFormEdicao(p){
   document.getElementById('ed-nome').value=p.razao_social||p.nome||'';
   document.getElementById('ed-telefone').value=p.telefone||'';
   document.getElementById('ed-produto').value=p.produto||'';
-  document.getElementById('ed-valor').value=parseFloat(p.valor||0).toFixed(2);
+  document.getElementById('ed-valor').value=Math.round(parseFloat(p.valor||0));
   document.getElementById('ed-data-aprov').value=p.data_aprovacao||'';
   document.getElementById('ed-vendedor').value=p.vendedor||'';
   document.getElementById('ed-periodo').value=p.periodo_obra||'';
@@ -1110,6 +1153,9 @@ function preencherFormEdicao(p){
   document.getElementById('ed-endereco').value=p.logradouro?
     [p.logradouro,p.numero,p.bairro,p.cidade,p.estado].filter(Boolean).join(', '):'';
   document.getElementById('ed-obs').value=p.observacoes||'';
+  document.getElementById('ed-tecnico').value=p.tecnico_responsavel||'';
+  document.getElementById('ed-midia').value=p.midia_origem||'';
+  document.getElementById('ed-desconto').value=p.desconto_pct!=null?parseFloat(p.desconto_pct).toFixed(0):'0';
 }
 
 async function salvarEdicao(){
@@ -1122,13 +1168,16 @@ async function salvarEdicao(){
       nome:document.getElementById('ed-nome').value.trim()||undefined,
       telefone:document.getElementById('ed-telefone').value.trim()||null,
       produto:document.getElementById('ed-produto').value.trim()||null,
-      valor:parseFloat(document.getElementById('ed-valor').value)||0,
+      valor:Math.round(parseFloat(document.getElementById('ed-valor').value)||0),
       data_aprovacao:document.getElementById('ed-data-aprov').value||null,
       vendedor:document.getElementById('ed-vendedor').value.trim()||null,
       periodo_obra:document.getElementById('ed-periodo').value.trim()||null,
       prazo_entrega:document.getElementById('ed-prazo').value.trim()||null,
       prev_instalacao:document.getElementById('ed-prev-inst').value||null,
-      observacoes:document.getElementById('ed-obs').value.trim()||null
+      observacoes:document.getElementById('ed-obs').value.trim()||null,
+      tecnico_responsavel:document.getElementById('ed-tecnico').value.trim()||null,
+      midia_origem:document.getElementById('ed-midia').value||null,
+      desconto_pct:parseFloat(document.getElementById('ed-desconto').value)||0
     };
     const{error}=await crmService.atualizarLead(leadId,upd);
     if(error)throw error;
@@ -1391,6 +1440,60 @@ async function abrirComprovante(ref){
   if(!/^https:\/\//i.test(url)){toast('URL inválida ou protocolo não permitido','err');return;}
   const win=window.open(url,'_blank','noopener,noreferrer');
   if(!win)toast('Pop-up bloqueado — permita pop-ups neste site','err');
+}
+
+/* ─── N1: Excluir Pedido ─────────────────────────────── */
+function excluirPedido(leadId){
+  if(!leadId)return;
+  const p=getPedido(leadId);if(!p)return;
+  const nome=p.razao_social||p.nome||('Pedido #'+leadId);
+  const ex=document.getElementById('crm-confirm-excluir-pedido');if(ex)ex.remove();
+  const dlg=document.createElement('div');
+  dlg.id='crm-confirm-excluir-pedido';
+  dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:10000';
+  dlg.innerHTML=`
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px 32px;max-width:400px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+      <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--red)">Excluir Pedido Permanentemente?</div>
+      <div style="padding:10px 14px;background:var(--bg-card2);border-radius:9px;margin-bottom:12px;text-align:left">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(nome)}</div>
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted);margin-top:3px">OS: ${esc(p.os||'—')} · Valor: ${brl(p.valor)}</div>
+      </div>
+      <div style="font-size:12px;color:var(--red);padding:9px 12px;background:var(--red-dim);border-radius:7px;margin-bottom:22px;border:1px solid rgba(240,81,106,.25);text-align:left">
+        ⚠️ Ação <strong>irreversível</strong>. Todas as movimentações financeiras vinculadas serão excluídas junto.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('crm-confirm-excluir-pedido').remove()"
+          style="padding:10px 20px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:13px;font-weight:600">Cancelar</button>
+        <button onclick="_confirmarExclusaoPedido(${leadId})"
+          style="padding:10px 20px;background:var(--red);border:none;border-radius:8px;color:white;cursor:pointer;font-size:13px;font-weight:600">Excluir</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dlg);
+}
+async function _confirmarExclusaoPedido(leadId){
+  const dlg=document.getElementById('crm-confirm-excluir-pedido');if(dlg)dlg.remove();
+  try{
+    const{error}=await crmService.deletarLead(leadId);
+    if(error)throw error;
+    _pedidos=_pedidos.filter(p=>p.id!==leadId);
+    _movimentacoes=_movimentacoes.filter(m=>m.lead_id!==leadId);
+    toast('Pedido excluído permanentemente.','ok');
+    fecharDetalhe();
+    renderTudo();
+  }catch(e){toast('Erro ao excluir: '+e.message,'err');}
+}
+
+/* ─── N1: Remover Relatório Técnico ─────────────────── */
+async function removerRelatorio(leadId){
+  if(!confirm('Remover o relatório técnico deste pedido?'))return;
+  try{
+    const{error}=await crmService.atualizarLead(leadId,{relatorio_tecnico_url:null});
+    if(error)throw error;
+    const p=getPedido(leadId);if(p)p.relatorio_tecnico_url=null;
+    toast('Relatório removido.','ok');
+    renderDetView(getPedido(leadId));
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 /* ─── Overlay close ──────────────────────────────────── */

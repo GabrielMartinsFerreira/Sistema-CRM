@@ -19,6 +19,7 @@ let _wizStep          = 0;
 let _wizParcelas      = [];
 let _wizAnexo         = null;
 let _parcelaIdCtr     = 0;
+let _wizDesconto      = 0;   // percentual de desconto comercial (step 1 → N2)
 let _cadEditId        = null;   // quando não-null, atualiza este cliente no CRUD
 let _fromGerenciar    = false;  // voltará para a central de clientes após salvar
 let _clientesCache    = [];     // cache local dos clientes (espelho de crm_clientes)
@@ -565,7 +566,9 @@ function wizGoTo(step){
   if(cancelBtn)  cancelBtn.style.display  = step < 1             ? '' : 'none';
   if(confirmBtn) confirmBtn.style.display = step === 3            ? '' : 'none';
   if(step === 2){
-    if(_aprvCurrentLead) document.getElementById('wiz-valor-projeto').textContent = brl(_aprvCurrentLead.valor);
+    const _base = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
+    const _vf   = Math.round(_base * (1 - (_wizDesconto || 0) / 100));
+    if(_aprvCurrentLead) document.getElementById('wiz-valor-projeto').textContent = brl(_vf);
     if(_wizParcelas.length === 0) adicionarLinhaParcela();
     atualizarTotalParcelas();
   }
@@ -598,6 +601,7 @@ function validarStep1(){
   }
   if(document.getElementById('aprov-telefone').value.replace(/\D/g,'').length < 10){ toast('Informe o telefone/WhatsApp','err'); return false; }
   if(!document.getElementById('aprov-periodo').value){ toast('Selecione o Período da Obra','err'); return false; }
+  if(!(document.getElementById('aprov-tecnico')?.value||'').trim()){ toast('Informe o Técnico Responsável','err'); return false; }
   return true;
 }
 function validarStep2(){
@@ -642,9 +646,10 @@ function renderParcelasContainer(){
     </div>`).join('');
 }
 function calcTotalParcelas(){
-  const val = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
-  const pct = _wizParcelas.reduce((a, p) => a + (parseFloat(p.pct) || 0), 0);
-  return { pct, reais: val * pct / 100, valorProjeto: val };
+  const base = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
+  const val  = Math.round(base * (1 - (_wizDesconto || 0) / 100));
+  const pct  = _wizParcelas.reduce((a, p) => a + (parseFloat(p.pct) || 0), 0);
+  return { pct, reais: Math.round(val * pct / 100), valorProjeto: val };
 }
 function atualizarTotalParcelas(){
   const t    = calcTotalParcelas();
@@ -694,6 +699,21 @@ function removerAnexoWiz(){
   document.getElementById('wiz-file-preview').style.display = 'none';
 }
 
+/* ── N2: Desconto comercial ── */
+function atualizarValorComDesconto(){
+  const pct = Math.min(100, Math.max(0, parseFloat(document.getElementById('aprov-desconto')?.value) || 0));
+  _wizDesconto = pct;
+  const base  = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
+  const final = Math.round(base * (1 - pct / 100));
+  const el = document.getElementById('aprov-valor-final');
+  if(el) el.value = base > 0 ? brl(final) : '';
+  if(_wizStep === 2){
+    const wvEl = document.getElementById('wiz-valor-projeto');
+    if(wvEl) wvEl.textContent = brl(final);
+    atualizarTotalParcelas();
+  }
+}
+
 /* ── Resumo Passo 3 (com datas das parcelas) ── */
 function renderResumoWizard(){
   const l = _aprvCurrentLead; if(!l) return;
@@ -718,7 +738,10 @@ function renderResumoWizard(){
     <div class="wiz-review-line"><span class="wiz-review-label">Código</span><span class="wiz-review-val">${esc(l.codigo_orcamento||'—')}</span></div>
     <div class="wiz-review-line"><span class="wiz-review-label">Cliente</span><span class="wiz-review-val">${esc(nomeStr)}</span></div>
     <div class="wiz-review-line"><span class="wiz-review-label">Documento</span><span class="wiz-review-val">${esc(docStr)}</span></div>
-    <div class="wiz-review-line"><span class="wiz-review-label">Valor</span><span class="wiz-review-val">${brl(l.valor)}</span></div>
+    <div class="wiz-review-line"><span class="wiz-review-label">Valor Original</span><span class="wiz-review-val">${brl(l.valor)}</span></div>
+    ${_wizDesconto > 0 ? `<div class="wiz-review-line"><span class="wiz-review-label">Desconto</span><span class="wiz-review-val" style="color:var(--green)">-${_wizDesconto}% → ${brl(Math.round(l.valor*(1-_wizDesconto/100)))}</span></div>` : ''}
+    <div class="wiz-review-line"><span class="wiz-review-label">Técnico</span><span class="wiz-review-val">${esc((document.getElementById('aprov-tecnico')?.value||'').trim()||'—')}</span></div>
+    ${(document.getElementById('aprov-midia')?.value||'') ? `<div class="wiz-review-line"><span class="wiz-review-label">Mídia/Origem</span><span class="wiz-review-val">${esc(document.getElementById('aprov-midia').value)}</span></div>` : ''}
     ${linhasPag}${anexoStr}`;
 }
 
@@ -814,6 +837,11 @@ function _aprvReset(){
   document.getElementById('aprovar-lead-id').value = '';
   const wsc = document.getElementById('wiz-salvar-cliente'); if(wsc) wsc.checked = false;
   removerAnexoWiz();
+  _wizDesconto = 0;
+  const adEl = document.getElementById('aprov-desconto'); if(adEl) adEl.value = '0';
+  const vfEl = document.getElementById('aprov-valor-final'); if(vfEl) vfEl.value = '';
+  const tecEl = document.getElementById('aprov-tecnico'); if(tecEl) tecEl.value = '';
+  const midEl = document.getElementById('aprov-midia'); if(midEl) midEl.value = '';
 }
 
 function _preencherDadosLead(lead){
@@ -841,6 +869,13 @@ function _preencherDadosLead(lead){
     document.getElementById('aprov-nome-completo').value = lead.nome || '';
     document.getElementById('aprov-cpf').value           = lead.cpf  || '';
   }
+  // N2/N3/N4: preenche desconto, técnico e mídia do lead (edição retroativa)
+  _wizDesconto = parseFloat(lead.desconto_pct || 0);
+  const adEl = document.getElementById('aprov-desconto'); if(adEl) adEl.value = _wizDesconto || 0;
+  const tecEl = document.getElementById('aprov-tecnico'); if(tecEl) tecEl.value = lead.tecnico_responsavel || '';
+  const midEl = document.getElementById('aprov-midia'); if(midEl) midEl.value = lead.midia_origem || '';
+  atualizarValorComDesconto();
+
   // Carrega parcelas salvas (com vencimento) da coluna JSONB leads.parcelas
   try{
     let ex = lead.parcelas;
@@ -924,6 +959,10 @@ async function confirmarAprovacao(){
       periodo_obra:  document.getElementById('aprov-periodo').value           || null,
       prazo_entrega: document.getElementById('aprov-prazo').value.trim()      || null,
       prev_instalacao: document.getElementById('aprov-prev-inst').value       || null,
+      valor: Math.round(parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0) * (1 - (_wizDesconto || 0) / 100)),
+      desconto_pct:  _wizDesconto || 0,
+      tecnico_responsavel: (document.getElementById('aprov-tecnico')?.value.trim() || null),
+      midia_origem:  (document.getElementById('aprov-midia')?.value || null),
     };
     if(docType === 'CPF'){
       dados.nome = document.getElementById('aprov-nome-completo').value.trim();

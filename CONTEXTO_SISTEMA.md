@@ -42,7 +42,7 @@ js/
 - **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, **`financeiro_movimentacoes`** (nova).
 - **Storage:** bucket **PRIVADO** `relatorios-tecnicos` (relatórios contêm PII → LGPD). A coluna `leads.relatorio_tecnico_url` guarda o **caminho**, não a URL; a leitura usa `createSignedUrl(path, 3600)` (URL temporária de 1h).
 - **Migração histórica:** `localStorage` foi 100% removido → tudo persiste no Supabase. Parcelas do wizard ficam em `leads.parcelas` (JSONB).
-- **Novos campos em `leads`:** `status_os` (TEXT, default 'Em andamento') e `motivo_congelamento` (TEXT).
+- **Campos em `leads`:** `status_os` (TEXT, default 'Em andamento'), `motivo_congelamento` (TEXT), `visita_relatorio_path` (TEXT), `observacoes` (TEXT), `desconto_pct` (NUMERIC 5,2, default 0), `tecnico_responsavel` (TEXT), `midia_origem` (TEXT).
 
 ### 2.3.1 🔐 SEGURANÇA (RLS + Auth — validado por pentest)
 - **Login obrigatório (Supabase Auth, e-mail/senha).** `js/core/auth.js` faz o gate: cada loader de página chama `await authGate()` antes de buscar dados. Sem sessão → mostra tela de login e **não carrega nada**.
@@ -56,7 +56,7 @@ js/
 - **Pendências de hardening (recomendado ao hospedar):** Leaked Password Protection ON, senha mínima ≥10, MFA opcional, servir só por HTTPS, definir Site URL, conferir aba Advisors→Security, backups automáticos.
 
 ### 2.4 Arquivos / Telas
-- **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível; ficha da visita com **WhatsApp + Google Maps + Waze** `https://www.waze.com/ul?q=...&navigate=yes`), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico).
+- **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível; ficha da visita com **WhatsApp + Google Maps + Waze** `https://www.waze.com/ul?q=...&navigate=yes`), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico). **Passo 1 inclui:** Desconto % (N2 — calcula valor final com `Math.round`, salva `desconto_pct` e `valor` arredondado), Técnico Responsável (N3 — obrigatório, salva `tecnico_responsavel`), Mídia/Origem (N4 — opcional, salva `midia_origem`).
 - **Responsividade:** os 3 HTML têm bloco `@media(max-width:640px)` (+400px) — body padding reduzido, abas/tabelas roláveis na horizontal, grids/forms em 1 coluna, modais 96vw, ficha de visita empilha botões. Mobile e desktop no mesmo arquivo (sem app separado).
 - **`faturamento.html`** — Núcleo financeiro com 3 abas no topo: **📊 Visão Obras** (custos/margem/lucro por pedido), **🏢 Gastos Fixos** (contas a pagar recorrentes) e **📉 Gastos Variáveis**. Inclui Health Dashboard, DRE comparativa e gráfico de fluxo de caixa semanal.
   - **Recorrência por série (`serie_id`):** gasto fixo com "Replicar" gera a série do mês atual até dezembro (mesma `serie_id`); continua no virar do ano (`garantirSeriesDoAno`). **Editar/Excluir** abre diálogo de escopo: *Apenas este mês / Este e os próximos / Todos* (operações em massa **preservam meses já PAGOS**).
@@ -64,7 +64,7 @@ js/
   - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
   - **Ficha OS:** o toggle "💳 Pagamentos" agora oculta também o **Valor do Contrato** (`#oc-valor-contrato`) na impressão.
 - **`pedidos.html`** *(nova, 2026-06-08)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). Três ações por linha:
-  - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas, saldo) e "Editar" (nome, produto, valor, datas, vendedor, observações).
+  - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas, saldo, observações, relatório técnico) e "Editar" (nome, produto, valor `Math.round`, datas, vendedor, observações, técnico responsável, mídia/origem, desconto). Botões: **🗑 Excluir Pedido** (diálogo de confirmação + `deletarLead`) e **🗑 Remover Relatório** (limpa `relatorio_tecnico_url`).
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
   - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
   - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (soma das Entradas em `financeiro_movimentacoes`) com barra de progresso, A Receber.
@@ -149,6 +149,7 @@ Rastreia recebimentos e saídas **reais** vinculados a cada pedido:
 - **Persona esperada:** atue como **Engenheiro de Software Full-Stack Sênior / Arquiteto de Soluções**. Pense em arquitetura, riscos e manutenibilidade.
 - **Nível técnico:** alto. Não simplifique demais; explique decisões de engenharia e trade-offs. Pode mostrar código real.
 - **Padrões de código inegociáveis:**
+  - **`Math.round()` em todos os preços** — regra de negócio: nenhum valor em centavos. Aplica em `salvarEdicao()` (valor do contrato) e `confirmarAprovacao()` (valor com desconto). `calcTotalParcelas()` também arredonda.
   - **Vanilla JS** + manipulação nativa de DOM (nada de frameworks).
   - Respeitar **as variáveis CSS do `:root`** (não introduzir cores soltas).
   - Toda operação assíncrona Supabase em **`try/catch`** com feedback via **`toast()`** (`'ok'` | `'err'` | `'warn'`).
