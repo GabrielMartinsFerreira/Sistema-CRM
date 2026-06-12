@@ -402,6 +402,17 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   <div id="det-edit-pane" style="display:none">
     <div class="form-row">
       <div class="form-group">
+        <label>Nº da OS <span style="color:var(--green)">✎ editável</span></label>
+        <input type="text" id="ed-os" class="form-control" placeholder="Ex: 3370" style="font-family:'DM Mono',monospace;border-color:rgba(34,212,143,.4)">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Corrija aqui erros de digitação, duplicidade ou renovação — sem precisar excluir o pedido.</div>
+      </div>
+      <div class="form-group">
+        <label>Código do Orçamento</label>
+        <input type="text" id="ed-codigo" class="form-control" readonly style="opacity:.6;cursor:not-allowed;font-family:'DM Mono',monospace" title="Código de origem — não editável">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
         <label>Nome / Razão Social</label>
         <input type="text" id="ed-nome" class="form-control">
       </div>
@@ -1193,6 +1204,8 @@ function renderDetView(p){
 
 function preencherFormEdicao(p){
   if(!p)return;
+  document.getElementById('ed-os').value=p.os||'';
+  document.getElementById('ed-codigo').value=p.codigo_orcamento||'—';
   document.getElementById('ed-nome').value=p.razao_social||p.nome||'';
   document.getElementById('ed-telefone').value=p.telefone||'';
   document.getElementById('ed-produto').value=p.produto||'';
@@ -1231,7 +1244,24 @@ async function salvarEdicao(){
   const btn=document.getElementById('btn-salvar-edicao');
   btn.disabled=true;btn.textContent='Salvando…';
   try{
+    /* ── Validação do Nº da OS (editável: duplicidade, renovação, erro de digitação) ── */
+    const novaOS=document.getElementById('ed-os').value.trim();
+    const pAtual=getPedido(leadId);
+    const osAnterior=(pAtual&&pAtual.os)||'';
+    if(novaOS!==osAnterior){
+      // Alerta de duplicidade: outro pedido já usa esta OS
+      const dup=novaOS?_pedidos.find(x=>x.id!==leadId&&String(x.os||'').trim().toUpperCase()===novaOS.toUpperCase()):null;
+      if(dup){
+        const nomeDup=dup.razao_social||dup.nome||('Pedido #'+dup.id);
+        const ok=confirm('⚠️ A OS "'+novaOS+'" já está em uso no pedido:\n\n'
+          +nomeDup+' ('+(dup.codigo_orcamento||'—')+')\n\n'
+          +'Deseja salvar mesmo assim com a OS duplicada?');
+        if(!ok){btn.disabled=false;btn.textContent='💾 Salvar Alterações';return;}
+      }
+    }
+
     const upd={
+      os:novaOS||null,
       nome:document.getElementById('ed-nome').value.trim()||undefined,
       telefone:document.getElementById('ed-telefone').value.trim()||null,
       produto:document.getElementById('ed-produto').value.trim()||null,
@@ -1261,7 +1291,10 @@ async function salvarEdicao(){
     // Update local state
     const p=getPedido(leadId);
     if(p)Object.assign(p,upd);
-    toast('Pedido atualizado com sucesso!','ok');
+    toast(novaOS!==osAnterior
+      ?'Pedido atualizado! OS alterada: '+(osAnterior||'—')+' → '+(novaOS||'—')
+      :'Pedido atualizado com sucesso!','ok');
+    if(p)document.getElementById('det-modal-title').textContent=`📄 ${p.codigo_orcamento||p.os||p.nome||'Pedido'}`;
     switchDetTab('view');
     renderDetView(getPedido(leadId));
     renderTudo();
