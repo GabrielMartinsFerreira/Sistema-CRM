@@ -607,34 +607,77 @@ function validarStep1(){
 function validarStep2(){
   if(_wizParcelas.length === 0){ toast('Adicione ao menos uma condição de pagamento','err'); return false; }
   const t = calcTotalParcelas();
-  if(Math.abs(t.pct - 100) > 0.01){ toast(`Pagamento cobre ${t.pct.toFixed(1)}% — precisa somar 100%`,'err'); return false; }
+  if(t.valorProjeto > 0 && t.reais !== t.valorProjeto){
+    const diff = t.reais - t.valorProjeto;
+    toast(diff < 0
+      ? `Parcelas somam ${brl(t.reais)} — faltam ${brl(Math.abs(diff))} para cobrir o total`
+      : `Parcelas somam ${brl(t.reais)} — excedem em ${brl(diff)}`, 'err');
+    return false;
+  }
   return true;
 }
 
-/* ── Parcelas com data de vencimento (Task 4) ── */
+/* ── Parcelas — dual-mode % ou R$ ── */
+function _wizValorFinal(){
+  const base = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
+  return Math.round(base * (1 - (_wizDesconto || 0) / 100));
+}
+
 function adicionarLinhaParcela(){
   const id = ++_parcelaIdCtr;
-  _wizParcelas.push({ id, metodo:'Pix', pct:'', condicao:'Sinal', vencimento:'' });
+  _wizParcelas.push({ id, metodo:'Pix', pct:0, valor_reais:0, condicao:'Sinal', vencimento:'', modo:'pct' });
   renderParcelasContainer();
 }
 function removerLinhaParcela(id){
   _wizParcelas = _wizParcelas.filter(p => p.id !== id);
   renderParcelasContainer(); atualizarTotalParcelas();
 }
+
+function _toggleModoParcela(id){
+  const p = _wizParcelas.find(x => x.id === id); if(!p) return;
+  const val = _wizValorFinal();
+  if((p.modo||'pct') === 'pct'){
+    p.modo = 'reais';
+    p.valor_reais = Math.round(val * (parseFloat(p.pct)||0) / 100);
+  } else {
+    p.modo = 'pct';
+    p.pct = val > 0 ? Math.round((parseFloat(p.valor_reais)||0) / val * 10000) / 100 : 0;
+  }
+  renderParcelasContainer(); atualizarTotalParcelas();
+}
+
+function _onWizParcInput(v, id){
+  const p = _wizParcelas.find(x => x.id === id); if(!p) return;
+  const val = _wizValorFinal();
+  if((p.modo||'pct') === 'pct'){
+    p.pct = parseFloat(v) || 0;
+    p.valor_reais = Math.round(val * p.pct / 100);
+  } else {
+    p.valor_reais = Math.round(parseFloat(v) || 0);
+    p.pct = val > 0 ? (p.valor_reais / val * 100) : 0;
+  }
+  atualizarTotalParcelas();
+}
+
 function renderParcelasContainer(){
   const cont = document.getElementById('parcelas-container'); if(!cont) return;
   const metodos = ['Crédito','Débito','Transferência','Pix','Boleto','Link'];
-  cont.innerHTML = _wizParcelas.map(p => `
+  const val = _wizValorFinal();
+  cont.innerHTML = _wizParcelas.map(p => {
+    const modo = p.modo || 'pct';
+    const inputVal = modo === 'pct' ? (p.pct || '') : (p.valor_reais || '');
+    return `
     <div class="parcela-row" id="pr-${p.id}">
       <select class="form-control" style="font-size:12px"
         onchange="_wizParcelas.find(x=>x.id===${p.id}).metodo=this.value">
         ${metodos.map(m => `<option value="${m}"${p.metodo===m?' selected':''}>${m}</option>`).join('')}
       </select>
-      <div style="position:relative">
-        <input type="number" class="form-control" style="font-size:12px;padding-right:22px"
-          placeholder="%" min="0" max="100" step="1" value="${p.pct||''}"
-          oninput="(function(v,id){const p=_wizParcelas.find(x=>x.id===id);if(p)p.pct=parseFloat(v)||0;atualizarTotalParcelas();})(this.value,${p.id})">
-        <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);pointer-events:none">%</span>
+      <div class="parc-val-wrap">
+        <button type="button" class="parc-modo-btn" title="Alternar % / R$"
+          onclick="_toggleModoParcela(${p.id})">${modo==='pct'?'%':'R$'}</button>
+        <input type="number" class="form-control" style="font-size:12px"
+          placeholder="${modo==='pct'?'0':'0'}" min="0" step="1" value="${inputVal}"
+          oninput="_onWizParcInput(this.value,${p.id})">
       </div>
       <input type="text" class="form-control" style="font-size:12px" placeholder="Sinal / Prazo / Condição"
         value="${esc(p.condicao||'')}"
@@ -643,33 +686,43 @@ function renderParcelasContainer(){
         value="${p.vencimento||''}"
         onchange="_wizParcelas.find(x=>x.id===${p.id}).vencimento=this.value">
       <button class="btn-rem-parcela" onclick="removerLinhaParcela(${p.id})" title="Remover">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
 function calcTotalParcelas(){
-  const base = parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0);
-  const val  = Math.round(base * (1 - (_wizDesconto || 0) / 100));
-  const pct  = _wizParcelas.reduce((a, p) => a + (parseFloat(p.pct) || 0), 0);
-  return { pct, reais: Math.round(val * pct / 100), valorProjeto: val };
+  const val = _wizValorFinal();
+  const reaisSum = _wizParcelas.reduce((a, p) => {
+    const r = (p.modo||'pct') === 'reais'
+      ? Math.round(parseFloat(p.valor_reais)||0)
+      : Math.round(val * (parseFloat(p.pct)||0) / 100);
+    return a + r;
+  }, 0);
+  const pct = val > 0 ? reaisSum / val * 100 : 0;
+  return { pct, reais: reaisSum, valorProjeto: val };
 }
+
 function atualizarTotalParcelas(){
   const t    = calcTotalParcelas();
   const fill = document.getElementById('wiz-parcela-fill'); if(!fill) return;
-  fill.style.width  = Math.min(t.pct, 100) + '%';
-  fill.className    = 'wiz-parcela-fill' + (t.pct > 100 ? ' over' : '');
+  const pctBar = Math.min(t.valorProjeto > 0 ? t.reais / t.valorProjeto * 100 : 0, 100);
+  fill.style.width  = pctBar + '%';
+  fill.className    = 'wiz-parcela-fill' + (t.reais > t.valorProjeto ? ' over' : '');
   document.getElementById('wiz-parcela-pct').textContent   = t.pct.toFixed(1) + '%';
   document.getElementById('wiz-parcela-reais').textContent = brl(t.reais) + ' de ' + brl(t.valorProjeto);
   const alertEl = document.getElementById('wiz-parcela-alert');
-  if(t.pct === 0){
+  const diff = t.reais - t.valorProjeto;
+  if(t.reais === 0 && t.valorProjeto === 0){
     alertEl.style.display = 'none';
-  } else if(t.pct < 100){
-    alertEl.style.display = ''; alertEl.className = 'wiz-parcela-alert warn';
-    alertEl.textContent = '⚠️ Faltam ' + (100 - t.pct).toFixed(1) + '% para cobrir o valor total';
-  } else if(t.pct > 100){
-    alertEl.style.display = ''; alertEl.className = 'wiz-parcela-alert err';
-    alertEl.textContent = '✗ Excede em ' + (t.pct - 100).toFixed(1) + '% — ajuste as parcelas';
-  } else {
+  } else if(diff === 0){
     alertEl.style.display = ''; alertEl.className = 'wiz-parcela-alert ok';
-    alertEl.textContent = '✓ Pagamento balanceado — 100% coberto';
+    alertEl.textContent = '✓ Pagamento balanceado — total coberto';
+  } else if(diff < 0){
+    alertEl.style.display = ''; alertEl.className = 'wiz-parcela-alert warn';
+    alertEl.textContent = `⚠️ Faltam ${brl(Math.abs(diff))} para cobrir o total`;
+  } else {
+    alertEl.style.display = ''; alertEl.className = 'wiz-parcela-alert err';
+    alertEl.textContent = `✗ Excede em ${brl(diff)} — ajuste as parcelas`;
   }
 }
 
@@ -881,8 +934,17 @@ function _preencherDadosLead(lead){
     let ex = lead.parcelas;
     if(typeof ex === 'string') ex = JSON.parse(ex || '[]');
     if(Array.isArray(ex) && ex.length){
-      _wizParcelas = ex;
-      _parcelaIdCtr = Math.max(...ex.map(p => p.id || 0), 0);
+      const baseVal = Math.round(parseFloat(lead.valor||0) * (1 - (parseFloat(lead.desconto_pct)||0) / 100));
+      _wizParcelas = ex.map((p, i) => ({
+        id: (p.id || i + 1),
+        metodo: p.metodo || 'Pix',
+        pct: parseFloat(p.pct) || 0,
+        valor_reais: p.valor_reais != null ? p.valor_reais : Math.round(baseVal * (parseFloat(p.pct)||0) / 100),
+        condicao: p.condicao || '',
+        vencimento: p.vencimento || '',
+        modo: p.modo || 'pct'
+      }));
+      _parcelaIdCtr = Math.max(..._wizParcelas.map(p => p.id || 0), 0);
     }
   }catch{}
 }
@@ -973,8 +1035,18 @@ async function confirmarAprovacao(){
       dados.nome_contato  = document.getElementById('aprov-nome-contato').value.trim() || null;
     }
 
-    // Persiste parcelas (com datas de vencimento) na coluna JSONB leads.parcelas
-    dados.parcelas = _wizParcelas;
+    // Persiste parcelas normalizadas na coluna JSONB leads.parcelas
+    const vf = Math.round(parseFloat(_aprvCurrentLead ? _aprvCurrentLead.valor || 0 : 0) * (1 - (_wizDesconto||0) / 100));
+    dados.parcelas = _wizParcelas.map(p => ({
+      metodo: p.metodo,
+      pct: parseFloat(p.pct) || 0,
+      valor_reais: (p.modo||'pct') === 'reais'
+        ? Math.round(parseFloat(p.valor_reais)||0)
+        : Math.round(vf * (parseFloat(p.pct)||0) / 100),
+      condicao: p.condicao || '',
+      vencimento: p.vencimento || '',
+      modo: p.modo || 'pct'
+    }));
 
     // Herança automática: se visita tinha relatório e wizard não anexou nenhum, herda
     const leadAtual = allLeads.find(l => l.id === id);

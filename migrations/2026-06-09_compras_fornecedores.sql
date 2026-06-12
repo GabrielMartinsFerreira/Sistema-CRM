@@ -60,7 +60,7 @@ RETURNS void LANGUAGE sql AS $$
 $$;
 
 -- ─── 4. VIEW — Relatório Consolidado de Despesas por OS ──────────────────
-CREATE OR REPLACE VIEW relatorio_despesas_os AS
+CREATE OR REPLACE VIEW relatorio_despesas_os WITH (security_invoker = true) AS
 SELECT
   l.id                                               AS os_id,
   l.codigo_orcamento,

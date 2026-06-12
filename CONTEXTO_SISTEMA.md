@@ -64,7 +64,7 @@ js/
   - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
   - **Ficha OS:** o toggle "💳 Pagamentos" agora oculta também o **Valor do Contrato** (`#oc-valor-contrato`) na impressão.
 - **`pedidos.html`** *(nova, 2026-06-08)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). Três ações por linha:
-  - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas, saldo, observações, relatório técnico) e "Editar" (nome, produto, valor `Math.round`, datas, vendedor, observações, técnico responsável, mídia/origem, desconto). Botões: **🗑 Excluir Pedido** (diálogo de confirmação + `deletarLead`) e **🗑 Remover Relatório** (limpa `relatorio_tecnico_url`).
+  - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas com `valor_reais`, saldo, observações, relatório técnico) e "Editar" (todos os campos + **editor completo de parcelas** com dual-mode % / R$, barra de progresso em tempo real, add/remove linhas). Botões: **🗑 Excluir Pedido** e **🗑 Remover Relatório**. `salvarEdicao()` persiste parcelas normalizadas no JSONB `leads.parcelas`.
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
   - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
   - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (soma das Entradas em `financeiro_movimentacoes`) com barra de progresso, A Receber.
@@ -149,7 +149,10 @@ Rastreia recebimentos e saídas **reais** vinculados a cada pedido:
 - **Persona esperada:** atue como **Engenheiro de Software Full-Stack Sênior / Arquiteto de Soluções**. Pense em arquitetura, riscos e manutenibilidade.
 - **Nível técnico:** alto. Não simplifique demais; explique decisões de engenharia e trade-offs. Pode mostrar código real.
 - **Padrões de código inegociáveis:**
-  - **`Math.round()` em todos os preços** — regra de negócio: nenhum valor em centavos. Aplica em `salvarEdicao()` (valor do contrato) e `confirmarAprovacao()` (valor com desconto). `calcTotalParcelas()` também arredonda.
+  - **`Math.round()` em todos os preços** — regra de negócio: nenhum valor em centavos. Aplica em `salvarEdicao()`, `confirmarAprovacao()` e em toda lógica de parcelas.
+- **Schema de parcelas** (JSONB `leads.parcelas`): `{ metodo, pct, valor_reais, condicao, vencimento, modo }`. `pct` é sempre salvo (back-calculado se usuário digitou R$). `valor_reais` é sempre salvo (calculado de `Math.round(val × pct/100)` se usuário digitou %). Parcelas antigas sem `valor_reais` fazem fallback para `Math.round(valor × pct/100)` na leitura.
+- **Validação de parcelas** (wizard `validarStep2` e editor de pedidos): `sum(valor_reais) === valorFinal` (inteiros exatos). **Não** usa `sum(pct) === 100` — evita falso positivo por arredondamento de ponto flutuante.
+- **Dual-mode % / R$** por parcela: botão toggle `[%]` / `[R$]` comuta o modo. Ao comutar, o valor é convertido automaticamente para a outra unidade.
   - **Vanilla JS** + manipulação nativa de DOM (nada de frameworks).
   - Respeitar **as variáveis CSS do `:root`** (não introduzir cores soltas).
   - Toda operação assíncrona Supabase em **`try/catch`** com feedback via **`toast()`** (`'ok'` | `'err'` | `'warn'`).
