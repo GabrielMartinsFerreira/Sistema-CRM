@@ -821,8 +821,9 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     <div class="cost-section"><span>📦 Materiais</span></div>
     <div class="form-row">
       <div class="form-group">
-        <label>Gastos Reais c/ Materiais (R$)</label>
-        <input type="number" id="fm-materiais" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularModal()">
+        <label style="display:flex;align-items:center;gap:6px">Gastos Reais c/ Materiais <span style="font-size:10px;color:var(--orange);background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);border-radius:4px;padding:1px 6px;font-weight:700">🔒 Automático</span></label>
+        <div id="fm-compras-display" style="height:40px;display:flex;align-items:center;padding:0 12px;background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.25);border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--orange)">R$ 0,00</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Preenchido automaticamente via módulo <a href="compras.html" style="color:var(--orange);text-decoration:underline">Compras</a>. Campo bloqueado para evitar conflitos.</div>
       </div>
       <div class="form-group">
         <label>Previsão Orçada de Materiais (R$)</label>
@@ -867,8 +868,8 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
         <span class="calc-value" id="cb-bruto" style="color:var(--accent)"></span>
       </div>
       <div class="calc-line">
-        <span class="calc-label">( − ) Materiais Reais</span>
-        <span class="calc-value" id="cb-mat" style="color:var(--red)"></span>
+        <span class="calc-label">( − ) 🛒 Compras / Insumos (Reais)</span>
+        <span class="calc-value" id="cb-mat" style="color:var(--orange)"></span>
       </div>
       <div class="calc-line">
         <span class="calc-label">( − ) Logística + Encargos</span>
@@ -1274,7 +1275,9 @@ function abrirFatModal(leadId){
   document.getElementById('fm-produto').textContent=p.produto||'—';
   document.getElementById('fm-os').textContent=p.os||'—';
   document.getElementById('fm-bruto').textContent=brl(p.valor);
-  document.getElementById('fm-materiais').value=c.mat||'';
+  const compras=comprasDe(leadId);
+  const comprasEl=document.getElementById('fm-compras-display');
+  if(comprasEl) comprasEl.textContent=brl(compras||0);
   document.getElementById('fm-prev-mat').value=c.prevMat||'';
   document.getElementById('fm-logistica').value=c.log||'';
   document.getElementById('fm-encargos').value=c.enc||'';
@@ -1294,18 +1297,18 @@ function calcularModal(){
   const p=allPedidos.find(x=>x.id===leadId);
   if(!p)return;
   const bruto=parseFloat(p.valor||0);
-  const mat=num('fm-materiais');
+  const compras=comprasDe(leadId);
   const log=num('fm-logistica');
   const enc=num('fm-encargos');
   const maoInst=num('fm-mao-inst');
   const comVend=num('fm-comis-vend');
   const comArq=num('fm-comis-arq');
-  const ded=mat+log+enc+maoInst+comVend+comArq;
+  const ded=compras+log+enc+maoInst+comVend+comArq;
   const lucro=bruto-ded;
   const margem=bruto>0?lucro/bruto*100:0;
 
   document.getElementById('cb-bruto').textContent=brl(bruto);
-  document.getElementById('cb-mat').textContent=brl(mat);
+  document.getElementById('cb-mat').textContent=brl(compras);
   document.getElementById('cb-log-enc').textContent=brl(log+enc);
   document.getElementById('cb-comissoes').textContent=brl(maoInst+comVend+comArq);
   document.getElementById('cb-deducoes').textContent=brl(ded);
@@ -1329,7 +1332,7 @@ async function salvarCustos(){
   btn.disabled=true;btn.textContent='Salvando…';
   const dados={
     lead_id:leadId,
-    materiais:num('fm-materiais'),
+    materiais:0,
     prev_materiais:num('fm-prev-mat'),
     logistica:num('fm-logistica'),
     encargos:num('fm-encargos'),
@@ -1421,6 +1424,7 @@ function abrirAuditModal(leadId){
   const f=fatMap[leadId];
   const c=fatCustos(f);
   const compras=comprasDe(leadId);
+  const realMat=compras>0?compras:c.mat;
   const bruto=parseFloat(p.valor||0);
   const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq+compras;
   const lucro=bruto-ded;
@@ -1482,10 +1486,10 @@ function abrirAuditModal(leadId){
     ${c.prevMat>0?`<div class="prev-vs-real">
       <div class="pvr-title">Previsão vs. Real — Materiais</div>
       <div class="pvr-row"><span style="color:var(--text-muted)">Previsão Orçada</span><span style="font-family:'DM Mono',monospace;color:var(--yellow);font-weight:600">${brl(c.prevMat)}</span></div>
-      <div class="pvr-row"><span style="color:var(--text-muted)">Gasto Real</span><span style="font-family:'DM Mono',monospace;color:var(--red);font-weight:600">${brl(c.mat)}</span></div>
+      <div class="pvr-row"><span style="color:var(--text-muted)">🛒 Gasto Real (Compras)</span><span style="font-family:'DM Mono',monospace;color:var(--orange);font-weight:600">${brl(realMat)}</span></div>
       <div class="pvr-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
         <span style="color:var(--text-muted)">Variação</span>
-        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${c.mat<=c.prevMat?'var(--green)':'var(--red)'}">${c.mat<=c.prevMat?'▼ ':'▲ '}${brl(Math.abs(c.prevMat-c.mat))}</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:${realMat<=c.prevMat?'var(--green)':'var(--red)'}">${realMat<=c.prevMat?'▼ ':'▲ '}${brl(Math.abs(c.prevMat-realMat))}</span>
       </div>
     </div>`:''}
     <div class="audit-result-box ${resultBorderCls}">
