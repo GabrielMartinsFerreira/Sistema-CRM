@@ -48,13 +48,21 @@ const financeiroService = {
   deletarMovimentacao(id){
     return db.from(TABLES.MOVIMENTACOES).delete().eq('id',id);
   },
-  /* Soma de Entradas CONFIRMADAS para um array de lead_ids (pode ser Set ou Array).
-   * Parcelas de cartão com status='Pendente' não entram no valor real recebido. */
+  /* Soma de Entradas CONFIRMADAS para um array de lead_ids.
+   * Exclui is_parcela_cartao=true (cronograma de recebíveis futuros).
+   * A "entrada-resumo" (is_parcela_cartao=false, valor=bruto) zeroa o saldo do cliente. */
   calcValorReal(movimentacoes, leadIds){
     const ids = new Set(leadIds);
     return (movimentacoes||[])
-      .filter(m=>m.tipo==='Entrada' && (m.status||'Confirmado')==='Confirmado' && ids.has(m.lead_id))
-      .reduce((s,m)=>s+parseFloat(m.valor||0), 0);
+      .filter(m=>m.tipo==='Entrada' && !m.is_parcela_cartao && (m.status||'Confirmado')==='Confirmado' && ids.has(m.lead_id))
+      .reduce((s,m)=>s+parseFloat(m.valor_bruto||m.valor||0), 0);
+  },
+
+  /* Cronograma de recebíveis de cartão de um lead, ordenado por vencimento. */
+  calcFluxoCartao(movimentacoes, leadId){
+    return (movimentacoes||[])
+      .filter(m=>m.lead_id===leadId && m.is_parcela_cartao)
+      .sort((a,b)=>(a.data_vencimento||'').localeCompare(b.data_vencimento||''));
   },
   /* ─────────── CATEGORIAS DINÂMICAS ─────────── */
   carregarCategorias(){

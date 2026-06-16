@@ -185,6 +185,24 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .caixa-progress{margin-top:6px;background:var(--border);border-radius:3px;height:5px;overflow:hidden}
 .caixa-progress-bar{height:100%;background:var(--blue);border-radius:3px;transition:width .4s}
 
+/* CRONOGRAMA DE RECEBÍVEIS DE CARTÃO */
+.sched-group{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
+.sched-group-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.sched-group-title{font-size:12px;font-weight:700;color:var(--text)}
+.sched-group-meta{font-size:10px;color:var(--text-muted);margin-left:8px}
+.sched-badge-pend{font-size:10px;color:var(--text-muted);background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:4px;padding:2px 7px;white-space:nowrap}
+.sched-badge-conf{font-size:10px;color:var(--green);background:var(--green-dim);border:1px solid rgba(34,212,143,.25);border-radius:4px;padding:2px 7px}
+.sched-badge-antec{font-size:10px;color:var(--yellow);background:var(--yellow-dim);border:1px solid rgba(245,197,66,.25);border-radius:4px;padding:2px 7px}
+.btn-antecipar{font-size:10px;padding:4px 10px;background:var(--yellow-dim);border:1px solid rgba(245,197,66,.4);color:var(--yellow);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-antecipar:hover{background:rgba(245,197,66,.2)}
+.btn-conf-parc{font-size:10px;padding:2px 8px;background:var(--green-dim);border:1px solid rgba(34,212,143,.3);color:var(--green);border-radius:4px;cursor:pointer;transition:background .15s}
+.btn-conf-parc:hover{background:rgba(34,212,143,.2)}
+.antecip-form{background:var(--bg-card);border:1px solid rgba(245,197,66,.35);border-radius:var(--radius-sm);padding:14px;margin-top:10px}
+.antecip-form-title{font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.antecip-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:flex-end}
+.antecip-preview-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--green);padding:8px 0}
+.antecip-preview-label{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+
 /* OS MODAL */
 .os-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
 .os-opt{display:flex;align-items:center;gap:10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .15s}
@@ -769,8 +787,13 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
       <div class="caixa-kpi-value" id="caixa-saida" style="color:var(--red)">—</div>
     </div>
     <div class="caixa-kpi">
-      <div class="caixa-kpi-label">A Receber</div>
+      <div class="caixa-kpi-label">A Receber (cliente)</div>
       <div class="caixa-kpi-value" id="caixa-a-receber" style="color:var(--yellow)">—</div>
+    </div>
+    <div class="caixa-kpi">
+      <div class="caixa-kpi-label">Recebível Cartão</div>
+      <div class="caixa-kpi-value" id="caixa-pend-cartao" style="color:var(--purple)">—</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px" id="caixa-pend-cartao-label"></div>
     </div>
   </div>
 
@@ -785,6 +808,32 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     📌 Movimentações Registradas
   </div>
   <div id="caixa-movs" style="margin-bottom:16px;overflow-x:auto"></div>
+
+  <!-- CRONOGRAMA DE RECEBÍVEIS DE CARTÃO (visível só quando há parcelas) -->
+  <div id="caixa-cartao-wrap" style="display:none">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;padding-top:14px;border-top:1px solid var(--border)">
+      📡 Cronograma de Recebíveis — Cartão de Crédito
+    </div>
+    <div id="caixa-cartao-schedule"></div>
+    <!-- Formulário inline de antecipação (oculto até clicar "Antecipar") -->
+    <div id="antecip-form" class="antecip-form" style="display:none">
+      <div class="antecip-form-title">⚡ Simular / Marcar Antecipação</div>
+      <input type="hidden" id="antecip-parent-id">
+      <div class="antecip-row">
+        <div>
+          <div class="antecip-preview-label">Taxa de Antecipação (%)</div>
+          <input type="number" id="antecip-taxa" class="form-control" min="0" max="30" step="0.01"
+            placeholder="Ex: 2.5" style="font-family:'DM Mono',monospace" oninput="calcAntecipar()">
+        </div>
+        <div>
+          <div class="antecip-preview-label">Líquido após antecipação</div>
+          <div class="antecip-preview-val" id="antecip-preview">—</div>
+        </div>
+        <button class="btn-act" style="background:var(--yellow-dim);border-color:rgba(245,197,66,.5);color:var(--yellow);padding:8px 14px" onclick="confirmarAntecipacao()">✓ Confirmar</button>
+        <button class="btn-gf-del" style="padding:8px 10px" onclick="fecharAntecipForm()" title="Cancelar">✕</button>
+      </div>
+    </div>
+  </div>
 
   <!-- FORM ADD MOVIMENTAÇÃO -->
   <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-top:4px">
@@ -900,10 +949,12 @@ function getPedido(id){ return _pedidos.find(p=>p.id===id); }
 function movPedido(leadId){ return _movimentacoes.filter(m=>m.lead_id===leadId); }
 
 function valRecebido(leadId){
-  // Conta apenas Entradas com status 'Confirmado' (ou null/undefined = legado = confirmado)
+  // Exclui is_parcela_cartao=true (cronograma de fluxo de caixa).
+  // A "entrada-resumo" (is_parcela_cartao=false, valor=bruto) é quem zeroa a dívida do cliente.
+  // valor_bruto||valor: retrocompat com entradas anteriores sem valor_bruto.
   return movPedido(leadId)
-    .filter(m=>m.tipo==='Entrada'&&(m.status||'Confirmado')==='Confirmado')
-    .reduce((s,m)=>s+parseFloat(m.valor||0),0);
+    .filter(m=>m.tipo==='Entrada'&&!m.is_parcela_cartao&&(m.status||'Confirmado')==='Confirmado')
+    .reduce((s,m)=>s+parseFloat(m.valor_bruto||m.valor||0),0);
 }
 
 function parseParcelas(p){
@@ -1681,18 +1732,35 @@ function renderCaixaModal(leadId){
   if(!p)return;
   const valor=parseFloat(p.valor||0);
   const movs=movPedido(leadId);
-  const totalEntrada=movs.filter(m=>m.tipo==='Entrada').reduce((s,m)=>s+parseFloat(m.valor||0),0);
-  const totalSaida  =movs.filter(m=>m.tipo==='Saída'  ).reduce((s,m)=>s+parseFloat(m.valor||0),0);
-  const aReceber=Math.max(0,valor-totalEntrada);
-  const pct=valor>0?Math.min(100,totalEntrada/valor*100):0;
 
-  document.getElementById('caixa-recebido').textContent=brl(totalEntrada);
+  // ── Separar cronograma de cartão das movimentações normais
+  const parcelasCartao=movs.filter(m=>m.is_parcela_cartao);
+  const movsNormais=movs.filter(m=>!m.is_parcela_cartao);
+
+  // ── KPIs (valRecebido já exclui parcelas de cartão e usa valor_bruto)
+  const recebidoCliente=valRecebido(leadId);
+  const totalSaida=movsNormais.filter(m=>m.tipo==='Saída').reduce((s,m)=>s+parseFloat(m.valor||0),0);
+  const aReceber=Math.max(0,valor-recebidoCliente);
+  const pct=valor>0?Math.min(100,recebidoCliente/valor*100):0;
+
+  // Recebível pendente de cartão (fluxo de caixa futuro)
+  const pendCartao=parcelasCartao.filter(m=>m.status==='Pendente'&&!m.antecipada).reduce((s,m)=>s+parseFloat(m.valor||0),0);
+  const confCartao=parcelasCartao.filter(m=>m.status==='Confirmado'||m.antecipada).reduce((s,m)=>s+parseFloat(m.valor||0),0);
+
+  document.getElementById('caixa-recebido').textContent=brl(recebidoCliente);
   document.getElementById('caixa-saida').textContent=brl(totalSaida);
   document.getElementById('caixa-a-receber').textContent=brl(aReceber);
   document.getElementById('caixa-pct').textContent=pct.toFixed(1)+'% recebido';
   document.getElementById('caixa-bar').style.width=pct.toFixed(1)+'%';
 
-  // Parcelas previstas
+  const elPendCartao=document.getElementById('caixa-pend-cartao');
+  const elPendCartaoLbl=document.getElementById('caixa-pend-cartao-label');
+  if(elPendCartao){
+    elPendCartao.textContent=parcelasCartao.length?brl(pendCartao+confCartao):'—';
+    if(elPendCartaoLbl) elPendCartaoLbl.textContent=parcelasCartao.length?`${confCartao>0?brl(confCartao)+' confirmado · ':''}${pendCartao>0?brl(pendCartao)+' pendente':''}`:'' ;
+  }
+
+  // ── Parcelas contratadas
   const pars=parseParcelas(p);
   let parcHtml;
   if(!pars.length){
@@ -1716,24 +1784,28 @@ function renderCaixaModal(leadId){
   }
   document.getElementById('caixa-parcelas').innerHTML=parcHtml;
 
-  // Movimentações
+  // ── Movimentações normais (exclui parcelas de cronograma de cartão)
   let movsHtml;
-  if(!movs.length){
+  if(!movsNormais.length){
     movsHtml='<div style="font-size:12px;color:var(--text-muted);padding:6px 0">Nenhuma movimentação registrada.</div>';
   }else{
     movsHtml=`<div style="overflow-x:auto"><table class="mini-table">
-      <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Forma</th><th style="text-align:right">Valor</th><th>Comp.</th><th></th></tr></thead>
-      <tbody>${movs.map(m=>{
+      <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th><th>Comp.</th><th></th></tr></thead>
+      <tbody>${movsNormais.map(m=>{
         const isE=m.tipo==='Entrada';
+        const isCard=m.forma_pagamento==='Cartão de Crédito'&&!m.is_parcela_cartao;
+        const taxaDisp=isCard&&(m.taxa_cartao_valor||0)>0?`<span style="font-size:9px;color:var(--text-muted)"> (taxa: ${brl(m.taxa_cartao_valor)})</span>`:'';
+        const statusBadge=m.status&&m.status!=='Confirmado'?`<span style="font-size:9px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:1px 5px">${m.status}</span>`:'';
         const clip=m.comprovante_url?
           `<button class="gf-clip has" onclick="abrirComprovante('${esc(m.comprovante_url)}')" title="Ver comprovante">📎</button>`:
           `<span class="gf-clip empty">📎</span>`;
         return `<tr>
           <td style="font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap">${fmtDate(m.data_movimentacao)}</td>
           <td><span class="tipo-badge ${isE?'tipo-entrada':'tipo-saida'}">${isE?'↑ Entrada':'↓ Saída'}</span></td>
-          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.descricao)}">${esc(m.descricao)}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.descricao)}">${esc(m.descricao)}${taxaDisp}</td>
           <td style="font-size:11px;color:var(--text-muted)">${esc(m.forma_pagamento||'—')}</td>
-          <td style="font-family:'DM Mono',monospace;font-weight:700;color:${isE?'var(--green)':'var(--red)'};text-align:right;white-space:nowrap">${isE?'+':'-'}${brl(m.valor)}</td>
+          <td>${statusBadge}</td>
+          <td style="font-family:'DM Mono',monospace;font-weight:700;color:${isE?'var(--green)':'var(--red)'};text-align:right;white-space:nowrap">${isE?'+':'-'}${brl(m.valor_bruto||m.valor)}</td>
           <td>${clip}</td>
           <td><button class="btn-gf-del" onclick="confirmarDelMov(${m.id})" title="Excluir">🗑</button></td>
         </tr>`;
@@ -1741,6 +1813,73 @@ function renderCaixaModal(leadId){
     </table></div>`;
   }
   document.getElementById('caixa-movs').innerHTML=movsHtml;
+
+  // ── Cronograma de recebíveis de cartão
+  const wrapCartao=document.getElementById('caixa-cartao-wrap');
+  if(parcelasCartao.length&&wrapCartao){
+    wrapCartao.style.display='';
+    renderCartaoSchedule(leadId,parcelasCartao);
+  }else if(wrapCartao){
+    wrapCartao.style.display='none';
+  }
+}
+
+/* Renderiza o cronograma de parcelas de cartão agrupado por entrada-resumo */
+function renderCartaoSchedule(leadId,parcelas){
+  const groups={};
+  parcelas.forEach(m=>{
+    const pid=String(m.parcela_parent_id||'sem-parent');
+    if(!groups[pid])groups[pid]=[];
+    groups[pid].push(m);
+  });
+  // Ordenar parcelas dentro de cada grupo
+  Object.values(groups).forEach(arr=>arr.sort((a,b)=>(a.data_vencimento||'').localeCompare(b.data_vencimento||'')));
+
+  let html='';
+  for(const [parentId,items] of Object.entries(groups)){
+    const totalLiq=items.reduce((s,m)=>s+parseFloat(m.valor||0),0);
+    const pendLiq=items.filter(m=>m.status==='Pendente'&&!m.antecipada).reduce((s,m)=>s+parseFloat(m.valor||0),0);
+    const parentMov=_movimentacoes.find(m=>m.id===parseInt(parentId));
+    const parentDesc=parentMov?parentMov.descricao.replace(' [Cartão de Crédito - Bruto]','').replace(' [Cartão Crédito - Bruto]',''):items[0]?.descricao||'Pagamento via Cartão';
+    const taxaTotalCartao=parentMov?(parseFloat(parentMov.taxa_cartao_valor)||0):0;
+    const valorBruto=parentMov?(parseFloat(parentMov.valor_bruto||parentMov.valor)||0):0;
+
+    html+=`<div class="sched-group">
+      <div class="sched-group-header">
+        <div>
+          <span class="sched-group-title">${esc(parentDesc)}</span>
+          <span class="sched-group-meta">${items.length}x · Bruto: ${brl(valorBruto)}${taxaTotalCartao>0?` · Taxa: ${brl(taxaTotalCartao)}`:''} · Líq: ${brl(totalLiq)}</span>
+        </div>
+        ${pendLiq>0
+          ?`<button class="btn-antecipar" onclick="abrirAntecipForm('${parentId}')">⚡ Antecipar</button>`
+          :'<span style="font-size:10px;color:var(--green)">✓ Cronograma quitado</span>'
+        }
+      </div>
+      <table class="mini-table" style="width:100%">
+        <thead><tr><th>#</th><th>Vencimento</th><th>Valor Líq.</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${items.map((m,i)=>{
+            let statusHtml;
+            if(m.antecipada) statusHtml=`<span class="sched-badge-antec">⚡ Antecipada</span>`;
+            else if(m.status==='Confirmado') statusHtml=`<span class="sched-badge-conf">✓ Confirmado</span>`;
+            else statusHtml=`<span class="sched-badge-pend">⏳ Pendente</span>`;
+            const btnConf=m.status==='Pendente'&&!m.antecipada
+              ?`<button class="btn-conf-parc" onclick="confirmarParcelaCartao(${m.id})">✓</button>`
+              :'';
+            return `<tr>
+              <td style="color:var(--text-muted)">${i+1}/${items.length}</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">${fmtDate(m.data_vencimento||m.data_movimentacao)}</td>
+              <td style="font-family:'DM Mono',monospace;color:var(--green);font-weight:700">${brl(m.valor)}</td>
+              <td>${statusHtml}</td>
+              <td>${btnConf}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  const el=document.getElementById('caixa-cartao-schedule');
+  if(el)el.innerHTML=html||'<div style="font-size:12px;color:var(--text-muted)">Nenhuma parcela no cronograma.</div>';
 }
 
 /* Pré-preenche form ao clicar "+ Reg." em uma parcela */
@@ -1873,6 +2012,98 @@ function fecharCartaoModal(){
   _cartaoCtx={};
 }
 
+/* ─── Confirmar parcela individual do cronograma de cartão ──────── */
+async function confirmarParcelaCartao(movId){
+  try{
+    const{error}=await financeiroService.atualizarMovimentacao(movId,{status:'Confirmado'});
+    if(error)throw error;
+    const idx=_movimentacoes.findIndex(m=>m.id===movId);
+    if(idx>=0)_movimentacoes[idx].status='Confirmado';
+    if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
+    toast('Parcela confirmada!','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+/* ─── Antecipação de recebíveis de cartão ───────────────────────── */
+let _antecipParentId=null;
+
+function abrirAntecipForm(parentId){
+  _antecipParentId=parentId;
+  document.getElementById('antecip-parent-id').value=parentId;
+  document.getElementById('antecip-taxa').value='';
+  document.getElementById('antecip-preview').textContent='—';
+  document.getElementById('antecip-form').style.display='';
+  document.getElementById('antecip-taxa').focus();
+}
+
+function fecharAntecipForm(){
+  _antecipParentId=null;
+  document.getElementById('antecip-form').style.display='none';
+  document.getElementById('antecip-taxa').value='';
+  document.getElementById('antecip-preview').textContent='—';
+}
+
+function calcAntecipar(){
+  const taxa=parseFloat(document.getElementById('antecip-taxa').value)||0;
+  const parcelas=_movimentacoes.filter(m=>
+    m.is_parcela_cartao&&String(m.parcela_parent_id)===String(_antecipParentId)&&m.status==='Pendente'&&!m.antecipada
+  );
+  const totalPend=parcelas.reduce((s,m)=>s+parseFloat(m.valor||0),0);
+  const taxaVal=Math.round(totalPend*taxa/100*100)/100;
+  const liquido=Math.round((totalPend-taxaVal)*100)/100;
+  const el=document.getElementById('antecip-preview');
+  if(el) el.innerHTML=`${brl(liquido)} <span style="font-size:10px;color:var(--text-muted)">(−${brl(taxaVal)} taxa)</span>`;
+}
+
+async function confirmarAntecipacao(){
+  if(!_antecipParentId){toast('Selecione um grupo de parcelas','err');return;}
+  const taxa=parseFloat(document.getElementById('antecip-taxa').value)||0;
+  const parcelas=_movimentacoes.filter(m=>
+    m.is_parcela_cartao&&String(m.parcela_parent_id)===String(_antecipParentId)&&m.status==='Pendente'&&!m.antecipada
+  );
+  if(!parcelas.length){toast('Sem parcelas pendentes para antecipar','err');return;}
+
+  const totalPend=parcelas.reduce((s,m)=>s+parseFloat(m.valor||0),0);
+  const taxaVal=Math.round(totalPend*taxa/100*100)/100;
+
+  const btn=document.querySelector('#antecip-form .btn-act');
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+
+  try{
+    for(const m of parcelas){
+      const{error}=await financeiroService.atualizarMovimentacao(m.id,{
+        antecipada:true,
+        status:'Confirmado',
+        taxa_antecipacao:taxaVal/parcelas.length
+      });
+      if(error)throw error;
+      const idx=_movimentacoes.findIndex(x=>x.id===m.id);
+      if(idx>=0)Object.assign(_movimentacoes[idx],{antecipada:true,status:'Confirmado',taxa_antecipacao:taxaVal/parcelas.length});
+    }
+    // Registra taxa de antecipação como custo variável do pedido
+    if(taxaVal>0&&_caixaPedidoId){
+      const parentMov=_movimentacoes.find(m=>m.id===parseInt(_antecipParentId));
+      financeiroService.inserirVariavel({
+        categoria:'Despesa Financeira',
+        descricao:`Taxa de Antecipação — ${parentMov?.descricao?.replace(' [Cartão de Crédito - Bruto]','')||'Cartão'}`,
+        valor:taxaVal,
+        pedido_id:_caixaPedidoId,
+        mes:new Date().getMonth(),
+        ano:new Date().getFullYear(),
+        status:'Pago',
+        dia_vencimento:new Date().getDate()
+      }).catch(e=>console.warn('[TaxaAntecip]',e.message));
+    }
+    toast(`⚡ ${parcelas.length} parcela${parcelas.length>1?'s':''} antecipada${parcelas.length>1?'s':''}${taxaVal>0?` · Taxa: ${brl(taxaVal)}`:''}!`,'ok');
+    fecharAntecipForm();
+    if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
+  }catch(e){
+    toast('Erro na antecipação: '+e.message,'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✓ Confirmar';}
+  }
+}
+
 function setTaxaTipo(tipo){
   _taxaTipo=tipo;
   document.getElementById('taxa-btn-pct').classList.toggle('active',tipo==='pct');
@@ -1923,8 +2154,8 @@ async function confirmarCartaoModal(){
   const {leadId,valor,desc,data,parRef,obs}=_cartaoCtx;
   if(!leadId){fecharCartaoModal();return;}
   const taxaInput=parseFloat(document.getElementById('cartao-taxa-val').value)||0;
-  const taxaValor=_taxaTipo==='pct'?valor*taxaInput/100:taxaInput;
-  const liquido=Math.max(0,valor-taxaValor);
+  const taxaValor=Math.round((_taxaTipo==='pct'?valor*taxaInput/100:taxaInput)*100)/100;
+  const liquido=Math.max(0,Math.round((valor-taxaValor)*100)/100);
   const n=parseInt(document.getElementById('cartao-parcelas').value)||1;
   const data1=document.getElementById('cartao-data-1').value;
   if(!data1){toast('Informe a data da 1ª parcela','err');return;}
@@ -1932,38 +2163,86 @@ async function confirmarCartaoModal(){
   const btn=document.getElementById('btn-confirmar-cartao');
   btn.disabled=true;btn.textContent='Salvando…';
 
+  const hoje=new Date().toISOString().slice(0,10);
+  const dataLanc=data||hoje;
+
+  // ── Arredondamento centesimal correto para divisão de parcelas
   const valParc=Math.round(liquido/n*100)/100;
-  const ajuste=Math.round((liquido-(valParc*n))*100)/100;
-  const [y,m,d]=data1.split('-').map(Number);
+  const ajuste=Math.round((liquido-valParc*n)*100)/100;
+  const [y,mo,dy]=data1.split('-').map(Number);
 
   try{
+    // ═══ PASSO 1: entrada-resumo — quita 100% da dívida do cliente imediatamente ═══
+    const resumoDados={
+      lead_id:leadId,
+      tipo:'Entrada',
+      descricao:`${desc} [Cartão de Crédito - Bruto]`,
+      valor:valor,                   // valor BRUTO — é o que zeroa o saldo do cliente
+      valor_bruto:valor,
+      valor_liquido:liquido,
+      data_movimentacao:dataLanc,
+      forma_pagamento:'Cartão de Crédito',
+      status:'Confirmado',           // cliente pagou — dívida quitada imediatamente
+      is_parcela_cartao:false,
+      taxa_cartao_valor:taxaValor,
+      parcela_ref:parRef||null,
+      observacao:obs||null,
+      comprovante_url:null
+    };
+    const{data:resumoRow,error:e1}=await financeiroService.inserirMovimentacao(resumoDados);
+    if(e1)throw e1;
+    if(resumoRow)_movimentacoes.unshift(resumoRow);
+    const parentId=resumoRow?.id||null;
+
+    // ═══ PASSO 2: N parcelas do cronograma de recebíveis (fluxo de caixa líquido) ═══
     for(let i=0;i<n;i++){
-      const dt=new Date(y,m-1+i,d);
+      const dt=new Date(y,mo-1+i,dy);
       const dtStr=dt.toISOString().slice(0,10);
-      const val=(i===n-1)?Math.round((valParc+ajuste)*100)/100:valParc;
-      const dados={
+      const val=i===n-1?Math.round((valParc+ajuste)*100)/100:valParc;
+      const parcDados={
         lead_id:leadId,
         tipo:'Entrada',
         descricao:`${desc} [Cartão ${i+1}/${n}]`,
-        valor:val,
+        valor:val,                      // valor LÍQUIDO por parcela
+        valor_bruto:Math.round(valor/n*100)/100,
+        valor_liquido:val,
         data_movimentacao:dtStr,
         data_vencimento:dtStr,
         forma_pagamento:'Cartão de Crédito',
         status:'Pendente',
-        taxa_cartao_valor:i===0?taxaValor:0,
+        is_parcela_cartao:true,         // NÃO conta para saldo do cliente
+        parcela_parent_id:parentId,
+        taxa_cartao_valor:0,
+        antecipada:false,
+        taxa_antecipacao:0,
         parcela_ref:parRef||null,
         observacao:obs||null,
         comprovante_url:null
       };
-      const{data:novaRow,error}=await financeiroService.inserirMovimentacao(dados);
-      if(error)throw error;
-      if(novaRow)_movimentacoes.unshift(novaRow);
+      const{data:parcRow,error:e2}=await financeiroService.inserirMovimentacao(parcDados);
+      if(e2)throw e2;
+      if(parcRow)_movimentacoes.unshift(parcRow);
     }
+
+    // ═══ PASSO 3: injeta taxa como custo variável do pedido (DRE + Margem automáticos) ═══
+    if(taxaValor>0){
+      financeiroService.inserirVariavel({
+        categoria:'Despesa Financeira',
+        descricao:`Taxa de Cartão — ${desc}`,
+        valor:taxaValor,
+        pedido_id:leadId,
+        mes:new Date().getMonth(),      // 0-indexed
+        ano:new Date().getFullYear(),
+        status:'Pago',                  // taxa já foi descontada na liquidação
+        dia_vencimento:new Date().getDate()
+      }).catch(e=>console.warn('[TaxaCartão] Gasto variável:',e.message));
+    }
+
     // Limpa o form do caixa
     ['mov-desc','mov-valor','mov-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('mov-forma').value='';
     document.getElementById('mov-parcela').value='';
-    toast(`✅ ${n} parcela${n>1?'s':''} de cartão lançada${n>1?'s':''} como Pendente!`,'ok');
+    toast(`✅ Cartão lançado: cliente quitado · ${n}x de ${brl(valParc)} no cronograma`,'ok');
     fecharCartaoModal();
     if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
     renderTudo();

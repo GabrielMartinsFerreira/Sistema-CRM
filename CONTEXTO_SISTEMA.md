@@ -1,6 +1,6 @@
 # 🧠 ARQUIVO DE CONTEXTO DEFINITIVO — GG TECH CRM (Conceito Vidros & Projetos)
 > System Prompt / Context File para uso em futuras conversas com IAs.
-> Última atualização: 2026-06-15 (Aging List, Cartão de Crédito parcelado, Contas a Pagar Unificado, bug fix Infraestrutura) · Mantido vivo a cada evolução do sistema.
+> Última atualização: 2026-06-15 (Aging List, Cartão de Crédito — split Bruto/Taxa/Líquido + antecipação + DRE automática, Contas a Pagar Unificado, bug fix Infraestrutura) · Mantido vivo a cada evolução do sistema.
 
 ---
 
@@ -73,7 +73,9 @@ js/
   - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas com `valor_reais`, saldo, observações, relatório técnico) e "Editar" (todos os campos + **editor completo de parcelas** com dual-mode % / R$, barra de progresso em tempo real, add/remove linhas). **Nº da OS é editável** *(2026-06-12)* — corrige duplicidade, cancelamento/renovação e erros de digitação sem excluir o pedido; ao salvar, alerta com `confirm()` se outra OS igual já existir (case-insensitive) e o toast mostra `OS alterada: antiga → nova`. Código do Orçamento permanece readonly. Botões: **🗑 Excluir Pedido** e **🗑 Remover Relatório**. `salvarEdicao()` persiste parcelas normalizadas no JSONB `leads.parcelas`.
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
   - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
-  - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (soma das Entradas em `financeiro_movimentacoes`) com barra de progresso, A Receber.
+  - **KPIs:** Total de Pedidos, Valor Total dos Contratos, **Valor Real Recebido** (entradas confirmadas, exclui parcelas-cartão) com barra de progresso, A Receber.
+  - **Modal de Caixa — 4 KPI cards:** "A Receber (cliente)", "Já Recebido", "Pend. Cartão" (roxo — soma das parcelas pendentes), "Conf. Cartão" (verde — parcelas liquidadas/antecipadas).
+  - **Cronograma de Cartão** (`#caixa-cartao-wrap`): agrupado por entrada-resumo, exibe bruto/taxa/líquido por grupo, botão "✓ Confirmar" por parcela pendente, botão "⚡ Antecipar" para antecipar todas as pendentes de uma vez (ver §3.4.3).
 - **`relatorios.html`** — Relatórios mensais (Chart.js): funil, vendedores, rankings, e o gráfico de **Breakeven** (receita × custos × gastos × lucro).
 - **`compras.html`** — **Compras & Fornecedores** com 2 abas:
   - **📋 Compras por Obra:** accordion OS → fornecedores → boletos (CRUD completo); KPIs; modal de pagamento com comprovante (bucket privado + signed URL); `auto_org`.
@@ -114,13 +116,103 @@ Colunas adicionadas: `dia_vencimento` (1–31), `status_pagamento`, `data_pagame
 - **Visão de linha do tempo (fluxo de caixa):** gráfico de barras Chart.js **“Previsão de Saídas por Semana”** agrupando vencimentos não pagos em Sem 1 (1–7), Sem 2 (8–14), Sem 3 (15–21), Sem 4 (22–28), Sem 5 (29–31).
 
 ### 3.4 Tabela `financeiro_movimentacoes`
-Rastreia recebimentos e saídas **reais** vinculados a cada pedido:
-- **Colunas:** `id`, `lead_id` (FK→leads ON DELETE CASCADE), `descricao`, `tipo` ('Entrada'|'Saída'), `valor` NUMERIC(12,2), `data_movimentacao` DATE, `data_vencimento` DATE *(novo 2026-06-15 — data de liquidação esperada da parcela de cartão)*, `status` TEXT DEFAULT 'Confirmado' *(novo — 'Confirmado' = dinheiro recebido; 'Pendente' = parcela de cartão futura aguardando liquidação)*, `taxa_cartao_valor` NUMERIC(10,2) DEFAULT 0 *(novo — taxa Stone/operadora descontada)*, `parcela_ref`, `forma_pagamento`, `comprovante_url`, `observacao`, `created_at`.
-- **Migration:** `migrations/2026-06-15_cartao_movimentacoes.sql` — adiciona `status`, `data_vencimento`, `taxa_cartao_valor`, índice `idx_movs_status_tipo`.
-- **RLS:** `FOR ALL TO authenticated USING(true) WITH CHECK(true)`. Índice em `lead_id`.
-- **Regra de negócio:** `calcValorReal()` e `valRecebido()` **filtram `status='Confirmado'`** (ou null = retrocompat = confirmado). Parcelas de cartão criadas como `status='Pendente'` não somam no "Valor Real Recebido" até o financeiro confirmar manualmente.
-- **Métodos em `financeiroService`:** `carregarMovimentacoes`, `carregarMovimentacoesPorLead`, `inserirMovimentacao`, `atualizarMovimentacao`, `deletarMovimentacao`, `calcValorReal(movs, leadIds)`, `calcSaidas(movs, leadIds)`.
-- **Valor Real no `faturamento.html`:** 5º KPI card **"Valor Real Recebido"** = soma das Entradas **Confirmadas** para os pedidos do mês.
+Rastreia recebimentos e saídas **reais** vinculados a cada pedido.
+
+#### 3.4.1 Colunas completas
+| Coluna | Tipo | Default | Descrição |
+|---|---|---|---|
+| `id` | BIGINT PK | — | Gerado automaticamente |
+| `lead_id` | BIGINT FK→leads | — | Pedido associado (CASCADE DELETE) |
+| `descricao` | TEXT | — | Descrição do lançamento |
+| `tipo` | TEXT | — | `'Entrada'` ou `'Saída'` |
+| `valor` | NUMERIC(12,2) | — | Valor da linha (net para parcelas cartão; bruto para entradas normais) |
+| `data_movimentacao` | DATE | — | Data do lançamento / competência |
+| `data_vencimento` | DATE | NULL | Data de liquidação esperada (parcelas cartão) |
+| `status` | TEXT | `'Confirmado'` | `'Confirmado'` = caixa; `'Pendente'` = a liquidar |
+| `taxa_cartao_valor` | NUMERIC(10,2) | 0 | Valor absoluto da taxa Stone/operadora descontada |
+| `parcela_ref` | TEXT | — | Rótulo da parcela (ex.: "1/3") |
+| `forma_pagamento` | TEXT | — | Pix, Boleto, Cartão, etc. |
+| `comprovante_url` | TEXT | — | Path ou URL do comprovante PIX |
+| `observacao` | TEXT | — | Nota livre |
+| **`valor_bruto`** | NUMERIC(12,2) | NULL | *(novo — split)* O que o cliente pagou — **zeroa 100% da dívida** |
+| **`valor_liquido`** | NUMERIC(12,2) | NULL | *(novo — split)* Valor líquido: `valor_bruto − taxa_cartao_valor` |
+| **`is_parcela_cartao`** | BOOLEAN | FALSE | TRUE nas N linhas do cronograma; FALSE na "entrada-resumo" |
+| **`parcela_parent_id`** | BIGINT FK | NULL | Aponta para o `id` da "entrada-resumo" que gerou o cronograma |
+| **`antecipada`** | BOOLEAN | FALSE | TRUE quando o financeiro marca que a operadora adiantou o valor |
+| **`taxa_antecipacao`** | NUMERIC(10,2) | 0 | Valor R$ da taxa cobrada na antecipação |
+| `created_at` | TIMESTAMPTZ | NOW() | — |
+
+**Migrations:**
+- `migrations/2026-06-15_cartao_movimentacoes.sql` — `status`, `data_vencimento`, `taxa_cartao_valor`, índice `idx_movs_status_tipo`
+- `migrations/2026-06-15_cartao_split_valores.sql` — 6 colunas do split + índices `idx_movs_parent_id`, `idx_movs_parcela_cartao`
+
+**RLS:** `FOR ALL TO authenticated USING(true) WITH CHECK(true)`. Índices em `lead_id` e `parcela_parent_id`.
+
+#### 3.4.2 🆕 Modelo Split Bruto / Taxa / Líquido (2026-06-15)
+
+Quando o cliente paga via **Cartão de Crédito**, o sistema cria **3 camadas de artefatos**:
+
+**Camada 1 — Saldo do cliente (entra-resumo):**
+```
+is_parcela_cartao = FALSE
+valor             = valor_bruto = R$10.000   ← zeroa 100% da dívida imediatamente
+valor_liquido     = R$9.700
+taxa_cartao_valor = R$300
+status            = 'Confirmado'              ← valRecebido() conta aqui
+```
+`valRecebido()` e `calcValorReal()` filtram `!is_parcela_cartao` + `status='Confirmado'` → **saldo = ZERO** após o lançamento.
+
+**Camada 2 — Cronograma de recebíveis (N parcelas):**
+```
+is_parcela_cartao = TRUE                      ← excluído do saldo do cliente
+parcela_parent_id = id da entrada-resumo
+valor             = R$3.233,33 (líquido/N)
+status            = 'Pendente'                ← vira 'Confirmado' quando a operadora deposita
+data_vencimento   = datas mensais calculadas
+```
+Exibidas no modal de caixa, aba "Cronograma de Cartão", com botão "✓ Confirmar" por parcela.
+
+**Camada 3 — Custo operacional (DRE):**
+```
+crm_gastos_variaveis {
+  categoria   = 'Despesa Financeira'
+  descricao   = 'Taxa de Cartão — <descrição do lançamento>'
+  valor       = R$300
+  pedido_id   = <lead_id>
+  mes/ano     = mês corrente
+  status      = 'Pago'
+}
+```
+Injetado automaticamente em `confirmarCartaoModal()`. `calcDRE()` e `calcResumoMes()` já consomem `variaveis[]` → margem de lucro recalculada **sem ação manual**.
+
+#### 3.4.3 🆕 Antecipação de Recebíveis
+
+Botão "⚡ Antecipar" no cabeçalho do grupo de parcelas:
+1. Operador informa taxa % da antecipação (ex.: 2,5 %).
+2. Todas as parcelas `status='Pendente'` do grupo viram `antecipada=true, status='Confirmado'`.
+3. Taxa de antecipação (R$) é auto-injetada em `crm_gastos_variaveis` (categoria `'Despesa Financeira'`).
+4. Modal de caixa recalcula KPIs; DRE absorve o custo automaticamente.
+
+#### 3.4.4 Regras de negócio e retrocompatibilidade
+
+- **`valRecebido(leadId)`** em `pedidos.html`: `!is_parcela_cartao && (status||'Confirmado')==='Confirmado'` usando `valor_bruto||valor`.
+- **`calcValorReal(movs, leadIds)`** em `financeiroService.js`: mesma lógica multi-lead.
+- **`calcFluxoCartao(movs, leadId)`** em `financeiroService.js`: retorna parcelas `is_parcela_cartao=true` ordenadas por `data_vencimento`.
+- **Retrocompat:** `is_parcela_cartao DEFAULT FALSE` → registros antigos sem a coluna comportam-se como entradas normais. `valor_bruto||valor` garante cálculo correto em registros sem `valor_bruto`.
+- **Float precision:** `Math.round(x * 100) / 100` em todos os cálculos de parcelas.
+
+#### 3.4.5 KPIs do modal de Caixa (4 cards)
+
+| Card | Cálculo |
+|---|---|
+| A Receber (cliente) | `lead.valor − valRecebido(leadId)` |
+| Já Recebido | `valRecebido(leadId)` (entradas-resumo confirmadas) |
+| Pend. Cartão | parcelas cartão com `status='Pendente'` |
+| Conf. Cartão | parcelas cartão com `status='Confirmado'` ou `antecipada=true` |
+
+**Métodos em `financeiroService`:** `carregarMovimentacoes`, `carregarMovimentacoesPorLead`, `inserirMovimentacao`, `atualizarMovimentacao`, `deletarMovimentacao`, `calcValorReal(movs, leadIds)`, `calcFluxoCartao(movs, leadId)`, `calcSaidas(movs, leadIds)`.
+
+**Valor Real no `faturamento.html`:** 5º KPI card **"Valor Real Recebido"** = soma das Entradas **Confirmadas** (não-parcela-cartão) para os pedidos do mês.
 
 ### 2.6 Contas a Pagar Unificado — aba 📋 em `faturamento.html`
 Nova aba `tab-contas-pagar` → `#view-contas-pagar`. Consolida 3 fontes de obrigações pendentes:
