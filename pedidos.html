@@ -135,6 +135,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(8,9,16,.82);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
+#cartao-modal{z-index:1010}
 .modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:94%;max-width:640px;max-height:92vh;overflow-y:auto}
 .modal-lg{max-width:800px}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
@@ -197,6 +198,8 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .btn-antecipar:hover{background:rgba(245,197,66,.2)}
 .btn-conf-parc{font-size:10px;padding:2px 8px;background:var(--green-dim);border:1px solid rgba(34,212,143,.3);color:var(--green);border-radius:4px;cursor:pointer;transition:background .15s}
 .btn-conf-parc:hover{background:rgba(34,212,143,.2)}
+.btn-del-sched{font-size:10px;padding:3px 8px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);color:var(--red,#f55);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;white-space:nowrap;line-height:1.4}
+.btn-del-sched:hover{background:rgba(255,80,80,.18);border-color:rgba(255,80,80,.5)}
 .antecip-form{background:var(--bg-card);border:1px solid rgba(245,197,66,.35);border-radius:var(--radius-sm);padding:14px;margin-top:10px}
 .antecip-form-title{font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .antecip-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:flex-end}
@@ -1850,10 +1853,13 @@ function renderCartaoSchedule(leadId,parcelas){
           <span class="sched-group-title">${esc(parentDesc)}</span>
           <span class="sched-group-meta">${items.length}x · Bruto: ${brl(valorBruto)}${taxaTotalCartao>0?` · Taxa: ${brl(taxaTotalCartao)}`:''} · Líq: ${brl(totalLiq)}</span>
         </div>
-        ${pendLiq>0
-          ?`<button class="btn-antecipar" onclick="abrirAntecipForm('${parentId}')">⚡ Antecipar</button>`
-          :'<span style="font-size:10px;color:var(--green)">✓ Cronograma quitado</span>'
-        }
+        <div style="display:flex;align-items:center;gap:6px">
+          ${pendLiq>0
+            ?`<button class="btn-antecipar" onclick="abrirAntecipForm('${parentId}')">⚡ Antecipar</button>`
+            :'<span style="font-size:10px;color:var(--green)">✓ Cronograma quitado</span>'
+          }
+          <button class="btn-del-sched" onclick="deletarCronogramaCartao('${parentId}')" title="Excluir cronograma">🗑 Excluir</button>
+        </div>
       </div>
       <table class="mini-table" style="width:100%">
         <thead><tr><th>#</th><th>Vencimento</th><th>Valor Líq.</th><th>Status</th><th></th></tr></thead>
@@ -1967,6 +1973,29 @@ async function deletarMovimentacao(id){
     if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
     renderTudo();
   }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+async function deletarCronogramaCartao(parentId){
+  const n=_movimentacoes.filter(m=>m.is_parcela_cartao&&String(m.parcela_parent_id)===String(parentId)).length;
+  if(!confirm(`Excluir este cronograma de cartão?\n\n${n} parcela${n!==1?'s':''} + a entrada-resumo serão removidas.\nO saldo devedor do cliente voltará ao estado anterior.`))return;
+  try{
+    // Remove as parcelas do cronograma
+    const parcelas=_movimentacoes.filter(m=>m.is_parcela_cartao&&String(m.parcela_parent_id)===String(parentId));
+    for(const m of parcelas){
+      const{error}=await financeiroService.deletarMovimentacao(m.id);
+      if(error)throw error;
+    }
+    // Remove a entrada-resumo (camada 1 — que zerava o saldo do cliente)
+    const{error:e2}=await financeiroService.deletarMovimentacao(parseInt(parentId));
+    if(e2)throw e2;
+    // Atualiza cache local
+    const idsRemover=new Set([...parcelas.map(m=>m.id),parseInt(parentId)]);
+    _movimentacoes=_movimentacoes.filter(m=>!idsRemover.has(m.id));
+    toast('Cronograma excluído','ok');
+    if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
+    renderTudo();
+    if(_viewMode==='cobranca')renderCobranca();
+  }catch(e){toast('Erro ao excluir cronograma: '+e.message,'err');}
 }
 
 async function abrirComprovante(ref){
@@ -2092,7 +2121,7 @@ async function confirmarAntecipacao(){
         ano:new Date().getFullYear(),
         status:'Pago',
         dia_vencimento:new Date().getDate()
-      }).catch(e=>console.warn('[TaxaAntecip]',e.message));
+      }).then(({error})=>{ if(error) console.warn('[TaxaAntecip]',error.message); });
     }
     toast(`⚡ ${parcelas.length} parcela${parcelas.length>1?'s':''} antecipada${parcelas.length>1?'s':''}${taxaVal>0?` · Taxa: ${brl(taxaVal)}`:''}!`,'ok');
     fecharAntecipForm();
@@ -2231,11 +2260,11 @@ async function confirmarCartaoModal(){
         descricao:`Taxa de Cartão — ${desc}`,
         valor:taxaValor,
         pedido_id:leadId,
-        mes:new Date().getMonth(),      // 0-indexed
+        mes:new Date().getMonth(),
         ano:new Date().getFullYear(),
-        status:'Pago',                  // taxa já foi descontada na liquidação
+        status:'Pago',
         dia_vencimento:new Date().getDate()
-      }).catch(e=>console.warn('[TaxaCartão] Gasto variável:',e.message));
+      }).then(({error})=>{ if(error) console.warn('[TaxaCartão]',error.message); });
     }
 
     // Limpa o form do caixa
