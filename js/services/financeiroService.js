@@ -78,6 +78,22 @@ const financeiroService = {
     return db.from(TABLES.CATEGORIAS).update({ativo:false}).eq('id',id);
   },
 
+  /* ─────────── CONTAS A PAGAR (tesouraria unificada) ─────────── */
+  carregarCP(){
+    return db.from('contas_a_pagar')
+      .select('*')
+      .order('data_vencimento',{ascending:true,nullsFirst:false});
+  },
+  inserirCP(dados){
+    return db.from('contas_a_pagar').insert([dados]).select().single();
+  },
+  atualizarCP(id, upd){
+    return db.from('contas_a_pagar').update(upd).eq('id', id);
+  },
+  deletarCP(id){
+    return db.from('contas_a_pagar').delete().eq('id', id);
+  },
+
   /* ─────────── MÉTODOS DE PAGAMENTO DINÂMICOS ─────────── */
   carregarMetodos(){
     return db.from(TABLES.METODOS_PAGAMENTO).select('*').eq('ativo',true).order('ordem',{ascending:true});
