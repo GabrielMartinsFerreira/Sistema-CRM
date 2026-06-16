@@ -2758,14 +2758,15 @@ function capBuildUnified(hojeStr){
       status:capStatusEfetivo(r),url_comprovante:r.url_comprovante||null,
       forma_pagamento:r.forma_pagamento||null});
   });
-  // 2. Boletos de fornecedores (legado — read-only no CP view)
+  // 2. Boletos de fornecedores (baixa disponível direto no CP view)
   (_boletosCP||[]).forEach(b=>{
-    const st=b.status==='Pago'?'pago':(b.data_vencimento&&b.data_vencimento<hojeStr?'atrasado':'aberto');
+    const isPago=b.status==='Pago';
+    const st=isPago?'pago':(b.data_vencimento&&b.data_vencimento<hojeStr?'atrasado':'aberto');
     rows.push({_fonte:'forn',_id:'b_'+b.id,_raw:b,origem:'forn',
-      descricao:b.descricao||b.numero_documento||'Boleto',complemento:b._osNome||'',
-      valor:parseFloat(b.valor||0),valor_pago:0,
-      vencimento:b.data_vencimento||null,pagamento:null,
-      status:st,url_comprovante:null,forma_pagamento:null});
+      descricao:b.descricao||b.numero_documento||'Boleto',complemento:(b._fornNome?b._fornNome+' · ':'')+( b._osNome||''),
+      valor:parseFloat(b.valor||0),valor_pago:isPago?parseFloat(b.valor||0):0,
+      vencimento:b.data_vencimento||null,pagamento:b.data_pagamento||null,
+      status:st,url_comprovante:b.comprovante_url||null,forma_pagamento:b.forma_pagamento||null});
   });
   // 3. Gastos fixos do mês (legado)
   getGastosMes(mesAtual,anoAtual).forEach(g=>{
@@ -2908,7 +2909,7 @@ function renderCapTabela(rows,hojeStr){
       }
       acao+=` <button class="btn-gf-del" onclick="deletarCP(${r._id})" title="Excluir">✕</button>`;
     } else if(!isCPNativo&&r.status!=='pago'){
-      if(r._fonte==='forn') acao=`<a href="compras.html" class="cap-btn-action" style="text-decoration:none" target="_blank">→ Compras</a>`;
+      if(r._fonte==='forn') acao=`<button class="cap-btn-action cap-btn-baixar" onclick="abrirFornBaixa(${r._raw.id})">✓ Baixar</button>`;
       else if(r._fonte==='fixo') acao=`<button class="cap-btn-action cap-btn-baixar" onclick="abrirPagamentoModal(${r._raw.id},'fixo')">✓ Baixar</button>`;
       else acao=`<button class="cap-btn-action cap-btn-baixar" onclick="abrirPagamentoModal(${r._raw.id},'variavel')">✓ Baixar</button>`;
     } else if(isCPNativo&&r.status==='pago'){
@@ -3021,9 +3022,11 @@ async function deletarCP(id){
 
 /* ─── Modal de Baixa Rápida ─────────────────────────────────────────── */
 let _capBaixaId=null;
+let _capBaixaFonte='cp'; // 'cp' | 'forn'
 function abrirCapBaixa(id){
   const r=_capCache.find(x=>x.id===id);if(!r)return;
   _capBaixaId=id;
+  _capBaixaFonte='cp';
   const g=x=>document.getElementById(x);
   g('capb-desc').textContent=r.descricao;
   g('capb-valor').textContent=brl(r.valor_original);
@@ -3038,7 +3041,26 @@ function abrirCapBaixa(id){
 }
 function fecharCapBaixa(){document.getElementById('cap-baixa-modal').classList.remove('open');}
 
+function abrirFornBaixa(boletoId){
+  const b=_boletosCP.find(x=>x.id===boletoId);if(!b)return;
+  _capBaixaId=boletoId;
+  _capBaixaFonte='forn';
+  const g=x=>document.getElementById(x);
+  const valor=parseFloat(b.valor||0);
+  g('capb-desc').textContent=(b.descricao||b.numero_documento||'Boleto')+(b._fornNome?' — '+b._fornNome:'');
+  g('capb-valor').textContent=brl(valor)+(b._osNome?' ('+b._osNome+')':'');
+  g('capb-valor-pago').value=valor.toFixed(2);
+  g('capb-data').value=new Date().toISOString().slice(0,10);
+  g('capb-forma').value=b.forma_pagamento||'';
+  g('capb-juros').value='0';
+  g('capb-multa').value='0';
+  g('capb-file').value='';
+  g('capb-split-hint').className='cap-split-hint'; // boletos não têm split
+  document.getElementById('cap-baixa-modal').classList.add('open');
+}
+
 function capBaixaCheckSplit(){
+  if(_capBaixaFonte==='forn') return;
   const r=_capCache.find(x=>x.id===_capBaixaId);if(!r)return;
   const pago=parseFloat(document.getElementById('capb-valor-pago').value)||0;
   const hint=document.getElementById('capb-split-hint');
@@ -3050,6 +3072,7 @@ function capBaixaCheckSplit(){
 }
 
 async function confirmarCapBaixa(){
+  if(_capBaixaFonte==='forn'){await _confirmarFornBaixa();return;}
   const r=_capCache.find(x=>x.id===_capBaixaId);if(!r)return;
   const g=x=>document.getElementById(x);
   const data=g('capb-data').value;
@@ -3095,6 +3118,41 @@ async function confirmarCapBaixa(){
     } else {
       toast('✅ Pagamento confirmado — '+forma,'ok');
     }
+  }catch(e){toast('Erro ao confirmar baixa: '+e.message,'err');btn.disabled=false;btn.textContent='✓ Confirmar Baixa';return;}
+  btn.disabled=false;btn.textContent='✓ Confirmar Baixa';
+  fecharCapBaixa();renderCP();
+}
+
+async function _confirmarFornBaixa(){
+  const b=_boletosCP.find(x=>x.id===_capBaixaId);if(!b)return;
+  const g=x=>document.getElementById(x);
+  const data=g('capb-data').value;
+  const forma=g('capb-forma').value;
+  const valorPago=parseFloat(g('capb-valor-pago').value)||0;
+  if(!data){toast('Informe a data do pagamento','err');return;}
+  if(!forma){toast('Selecione a conta/forma de pagamento','err');return;}
+  if(valorPago<=0){toast('Informe o valor pago','err');return;}
+  const btn=g('capb-confirm-btn');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    let urlComp=b.comprovante_url||null;
+    const fileEl=g('capb-file');
+    const file=fileEl&&fileEl.files&&fileEl.files[0];
+    if(file){
+      if(file.size>10*1024*1024)throw new Error('Arquivo muito grande — máx. 10 MB');
+      btn.textContent='Enviando comprovante…';
+      const uid=(_authSession&&_authSession.user)?_authSession.user.id:'anon';
+      const ext=(file.name.split('.').pop()||'bin').toLowerCase();
+      const path='comprovantes-pagamento/'+uid+'/forn_'+_capBaixaId+'_'+Date.now()+'.'+ext;
+      const{error:upErr}=await crmService.uploadRelatorio(path,file,file.type);
+      if(upErr)throw new Error('Upload: '+upErr.message);
+      urlComp=path;btn.textContent='Salvando…';
+    }
+    const{error}=await comprasService.marcarPago(_capBaixaId,data,forma,urlComp||undefined);
+    if(error)throw error;
+    // Atualiza cache local para refletir imediatamente sem reload
+    b.status='Pago';b.data_pagamento=data;b.forma_pagamento=forma;
+    if(urlComp)b.comprovante_url=urlComp;
+    toast('✅ Boleto liquidado — '+forma,'ok');
   }catch(e){toast('Erro ao confirmar baixa: '+e.message,'err');btn.disabled=false;btn.textContent='✓ Confirmar Baixa';return;}
   btn.disabled=false;btn.textContent='✓ Confirmar Baixa';
   fecharCapBaixa();renderCP();
