@@ -80,6 +80,20 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .prev-search .form-control{flex:1;min-width:200px}
 .btn-buscar{padding:9px 18px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
 .btn-buscar:hover{background:#4a5de0}
+.cp-qfilter{padding:6px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.cp-qfilter:hover{border-color:var(--border-hover);color:var(--text)}
+.cp-qfilter.active{background:var(--accent-glow);border-color:rgba(91,110,245,.4);color:var(--accent)}
+.cp-table{width:100%;border-collapse:collapse;font-size:12px}
+.cp-table th{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.cp-table td{padding:9px 10px;border-bottom:1px solid rgba(37,40,64,.5);vertical-align:middle}
+.cp-table tr:last-child td{border-bottom:none}
+.cp-table tr:hover td{background:var(--bg-card2)}
+.cp-origem-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.cp-orig-forn{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.cp-orig-fixo{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.cp-orig-var{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.cp-venc-danger{color:var(--red);font-weight:700}
+.cp-venc-warn{color:var(--yellow);font-weight:600}
 .prev-result{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;display:none}
 .prev-result.show{display:block}
 .prev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:12px}
@@ -405,6 +419,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   <button class="view-tab active" id="tab-obras" onclick="setView('obras')">📊 Visão Obras</button>
   <button class="view-tab" id="tab-gastos" onclick="setView('gastos')">🏢 Gastos Fixos</button>
   <button class="view-tab" id="tab-variaveis" onclick="setView('variaveis')">📉 Gastos Variáveis</button>
+  <button class="view-tab" id="tab-contas-pagar" onclick="setView('contas-pagar')">📋 Contas a Pagar</button>
 </div>
 
 <div id="view-obras">
@@ -576,6 +591,46 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
         <div style="font-size:12px;color:var(--text-dim);margin-top:4px" id="gv-indice-pct">0% s/ Faturamento</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- VIEW CONTAS A PAGAR UNIFICADO -->
+<div id="view-contas-pagar" style="display:none">
+  <!-- Quick-filters -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Filtrar:</span>
+    <button class="cp-qfilter active" id="cpf-todos" onclick="setCPFilter('todos')">📋 Todos Pendentes</button>
+    <button class="cp-qfilter" id="cpf-semana" onclick="setCPFilter('semana')">⏰ Vence Esta Semana</button>
+    <button class="cp-qfilter" id="cpf-atrasado" onclick="setCPFilter('atrasado')">🔴 Em Atraso</button>
+    <span id="cp-total-badge" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--orange)"></span>
+  </div>
+  <!-- KPIs resumo -->
+  <div class="kpi-row" style="margin-bottom:16px">
+    <div class="kpi-card" style="border-left-color:var(--orange)">
+      <div class="kpi-label">Fornecedores / OS</div>
+      <div class="kpi-value" id="cp-k-fornec" style="color:var(--orange)">—</div>
+      <div class="kpi-sub">boletos pendentes</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--yellow)">
+      <div class="kpi-label">Gastos Fixos</div>
+      <div class="kpi-value" id="cp-k-fixos" style="color:var(--yellow)">—</div>
+      <div class="kpi-sub">não quitados no mês</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--purple)">
+      <div class="kpi-label">Gastos Variáveis</div>
+      <div class="kpi-value" id="cp-k-variaveis" style="color:var(--purple)">—</div>
+      <div class="kpi-sub">não quitados no mês</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--red)">
+      <div class="kpi-label">Total Vencido</div>
+      <div class="kpi-value" id="cp-k-vencido" style="color:var(--red)">—</div>
+      <div class="kpi-sub">soma de obrigações atrasadas</div>
+    </div>
+  </div>
+  <!-- Tabela unificada -->
+  <div class="card">
+    <div class="section-title">📋 Obrigações Financeiras Pendentes</div>
+    <div id="cp-table-wrap"><div class="empty-msg">Carregando…</div></div>
   </div>
 </div>
 
@@ -1162,6 +1217,7 @@ async function carregar(){
     await loadGastosFixosDB();
     await loadVariaveisDB();
     carregarMetodosPag(); // não aguarda — renderiza selects quando resolver
+    await loadBoletosCP();
     await garantirSeriesDoAno(anoAtual);
     atualizarNavMesFat();
     renderPorMes();
@@ -1735,13 +1791,149 @@ function fecharOsCard(){
 
 /* ═══ ALTERNÂNCIA DE VIEWS ═══ */
 function setView(view){
-  document.getElementById('view-obras').style.display    = view==='obras'    ? '' : 'none';
-  document.getElementById('view-gastos').style.display   = view==='gastos'   ? '' : 'none';
-  document.getElementById('view-variaveis').style.display= view==='variaveis'? '' : 'none';
-  document.getElementById('tab-obras').className    = 'view-tab' + (view==='obras'    ?' active':'');
-  document.getElementById('tab-gastos').className   = 'view-tab' + (view==='gastos'   ?' active':'');
-  document.getElementById('tab-variaveis').className= 'view-tab' + (view==='variaveis'?' active':'');
+  ['obras','gastos','variaveis','contas-pagar'].forEach(v=>{
+    const el=document.getElementById('view-'+v);
+    if(el) el.style.display=(v===view)?'':'none';
+    const tab=document.getElementById('tab-'+v);
+    if(tab) tab.className='view-tab'+(v===view?' active':'');
+  });
   if(view==='variaveis'){ popularPedidoSelect(); renderVariaveis(); }
+  if(view==='contas-pagar'){ renderContasPagar(); }
+}
+
+/* ═══ CONTAS A PAGAR UNIFICADO ═══ */
+let _boletosCP=[];        // boletos de fornecedores (carregados no carregar())
+let _cpFiltroAtual='todos';
+
+function setCPFilter(f){
+  _cpFiltroAtual=f;
+  ['todos','semana','atrasado'].forEach(x=>{
+    const b=document.getElementById('cpf-'+x);
+    if(b) b.className='cp-qfilter'+(x===f?' active':'');
+  });
+  renderContasPagar();
+}
+
+function renderContasPagar(){
+  const hoje=new Date();
+  hoje.setHours(0,0,0,0);
+  const hojeStr=hoje.toISOString().slice(0,10);
+
+  // Fim da semana (domingo)
+  const fimSemana=new Date(hoje);
+  fimSemana.setDate(fimSemana.getDate()+(6-fimSemana.getDay()));
+  const fimSemStr=fimSemana.toISOString().slice(0,10);
+
+  // ── 1. Boletos de fornecedores pendentes ──
+  const boletosRows=[];
+  (_boletosCP||[]).forEach(b=>{
+    if(b.status==='Pago') return;
+    const efetivo=(b.data_vencimento&&b.data_vencimento<hojeStr)?'Atrasado':'Pendente';
+    boletosRows.push({
+      origem:'Fornecedor',
+      descricao:b.descricao||b.numero_documento||'Boleto',
+      complemento:b._osNome||'',
+      valor:parseFloat(b.valor||0),
+      vencimento:b.data_vencimento||null,
+      status:efetivo,
+      id:'b_'+b.id
+    });
+  });
+
+  // ── 2. Gastos fixos pendentes do mês ──
+  const gastosRows=[];
+  getGastosMes(mesAtual,anoAtual).filter(g=>!isPago(g)).forEach(g=>{
+    const vencStr=g.dia_vencimento?`${anoAtual}-${String(mesAtual+1).padStart(2,'0')}-${String(g.dia_vencimento).padStart(2,'0')}`:null;
+    const atrasado=vencStr&&vencStr<hojeStr;
+    gastosRows.push({
+      origem:'Fixo',
+      descricao:g.nome||'—',
+      complemento:g.categoria||'',
+      valor:parseFloat(g.valor||0),
+      vencimento:vencStr,
+      status:atrasado?'Atrasado':'Pendente',
+      id:'f_'+g.id
+    });
+  });
+
+  // ── 3. Gastos variáveis pendentes do mês ──
+  const variaveisRows=[];
+  (_variaveisCache||[]).filter(v=>v.mes===mesAtual&&v.ano===anoAtual&&v.status!=='Pago').forEach(v=>{
+    const vencStr=v.dia_vencimento?`${anoAtual}-${String(mesAtual+1).padStart(2,'0')}-${String(v.dia_vencimento).padStart(2,'0')}`:null;
+    const atrasado=vencStr&&vencStr<hojeStr;
+    variaveisRows.push({
+      origem:'Variável',
+      descricao:v.descricao||'—',
+      complemento:v.categoria||'',
+      valor:parseFloat(v.valor||0),
+      vencimento:vencStr,
+      status:atrasado?'Atrasado':'Pendente',
+      id:'v_'+v.id
+    });
+  });
+
+  // ── Filtro ──
+  let allRows=[...boletosRows,...gastosRows,...variaveisRows];
+  if(_cpFiltroAtual==='semana'){
+    allRows=allRows.filter(r=>r.vencimento&&r.vencimento>=hojeStr&&r.vencimento<=fimSemStr);
+  } else if(_cpFiltroAtual==='atrasado'){
+    allRows=allRows.filter(r=>r.status==='Atrasado');
+  }
+
+  // ── KPIs ──
+  const kFornec=boletosRows.reduce((s,r)=>s+r.valor,0);
+  const kFixos=gastosRows.reduce((s,r)=>s+r.valor,0);
+  const kVar=variaveisRows.reduce((s,r)=>s+r.valor,0);
+  const kVencido=allRows.filter(r=>r.status==='Atrasado').reduce((s,r)=>s+r.valor,0);
+  const g=id=>document.getElementById(id);
+  if(g('cp-k-fornec')) g('cp-k-fornec').textContent=brl(kFornec);
+  if(g('cp-k-fixos'))  g('cp-k-fixos').textContent=brl(kFixos);
+  if(g('cp-k-variaveis')) g('cp-k-variaveis').textContent=brl(kVar);
+  if(g('cp-k-vencido'))   g('cp-k-vencido').textContent=brl(kVencido);
+  if(g('cp-total-badge'))  g('cp-total-badge').textContent=allRows.length?`${allRows.length} contas · ${brl(allRows.reduce((s,r)=>s+r.valor,0))}` :'';
+
+  // ── Render tabela ──
+  const wrap=g('cp-table-wrap');
+  if(!wrap) return;
+  if(!allRows.length){
+    wrap.innerHTML='<div class="empty-msg">Nenhuma obrigação pendente'+(
+      _cpFiltroAtual==='semana'?' para esta semana':_cpFiltroAtual==='atrasado'?' em atraso':''
+    )+'.</div>';
+    return;
+  }
+
+  // Ordena: atrasadas primeiro, depois por data de vencimento
+  allRows.sort((a,b)=>{
+    if(a.status==='Atrasado'&&b.status!=='Atrasado') return -1;
+    if(b.status==='Atrasado'&&a.status!=='Atrasado') return 1;
+    if(!a.vencimento&&!b.vencimento) return 0;
+    if(!a.vencimento) return 1;
+    if(!b.vencimento) return -1;
+    return a.vencimento.localeCompare(b.vencimento);
+  });
+
+  const origemBadge={
+    'Fornecedor':'<span class="cp-origem-badge cp-orig-forn">🛒 Fornecedor</span>',
+    'Fixo':'<span class="cp-origem-badge cp-orig-fixo">🏢 Fixo</span>',
+    'Variável':'<span class="cp-origem-badge cp-orig-var">📉 Variável</span>'
+  };
+  const stMap={'Atrasado':'<span class="gf-status-badge s-atrasado">⚠ Atrasado</span>','Pendente':'<span class="gf-status-badge s-pendente">○ Pendente</span>'};
+
+  const rows=allRows.map(r=>{
+    const vencCls=r.status==='Atrasado'?'cp-venc-danger':(r.vencimento===hojeStr?'cp-venc-warn':'');
+    const vencTxt=r.vencimento?r.vencimento.split('-').reverse().join('/'):' — ';
+    return `<tr>
+      <td>${origemBadge[r.origem]||r.origem}</td>
+      <td><span style="font-weight:600">${esc(r.descricao)}</span>${r.complemento?`<br><span style="font-size:10px;color:var(--text-muted)">${esc(r.complemento)}</span>`:''}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--orange)">${brl(r.valor)}</td>
+      <td class="${vencCls}">${vencTxt}</td>
+      <td>${stMap[r.status]||r.status}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML=`<table class="cp-table"><thead><tr>
+    <th>Origem</th><th>Descrição / Detalhes</th><th>Valor</th><th>Vencimento</th><th>Status</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /* ═══ GASTOS FIXOS (dados via financeiroService) ═══ */
@@ -2337,9 +2529,12 @@ function renderGastosFixos(){
     if(badge)badge.textContent='';
     return;
   }
-  // Grupos dinâmicos: prefere _categoriasCache, fallback estático
+  // Grupos dinâmicos: union(DB, dados reais) — evita "fantasma" de categorias sem grupo no BD
+  const staticCats=['Infraestrutura','Pessoal','Serviços','Marketing/Financeiro'];
   const catsFromDB=[...new Set(_categoriasCache.filter(x=>x.tipo==='fixo'&&x.grupo).map(x=>x.grupo))];
-  const cats=catsFromDB.length?catsFromDB:['Infraestrutura','Pessoal','Serviços','Marketing/Financeiro'];
+  const catsFromData=[...new Set(gastos.map(g=>g.categoria).filter(Boolean))];
+  const catsBase=catsFromDB.length?catsFromDB:staticCats;
+  const cats=[...new Set([...catsBase,...catsFromData])];
   const stMap={'Pago':'s-pago','Atrasado':'s-atrasado','Agendado':'s-agendado','Pendente':'s-pendente'};
   const NCOLS=8;
   let rows='',total=0,totalPago=0;
@@ -2412,6 +2607,23 @@ async function loadVariaveisDB(){
     _variaveisCache=(data||[]).map(v=>({...v,valor:parseFloat(v.valor||0)}));
   }catch(e){ console.warn('gastos_variaveis load:',e.message); }
   return _variaveisCache;
+}
+
+/* ═══ BOLETOS DE FORNECEDORES (para Contas a Pagar Unificado) ═══ */
+async function loadBoletosCP(){
+  try{
+    const{data,error}=await comprasService.carregarOSComFornecedores();
+    if(error)throw error;
+    _boletosCP=[];
+    (data||[]).forEach(os=>{
+      const osNome=(os.codigo_orcamento?`OS ${os.codigo_orcamento}`:'')+(os.nome||os.razao_social?` — ${os.nome||os.razao_social}`:'');
+      (os.compras_fornecedores_os||[]).forEach(forn=>{
+        (forn.boletos_fornecedores||[]).forEach(b=>{
+          _boletosCP.push({...b,_osNome:osNome,_fornNome:forn.fornecedor_nome||''});
+        });
+      });
+    });
+  }catch(e){ console.warn('[BoletosCP] load:',e.message); _boletosCP=[]; }
 }
 
 /* Popula o <select> de Obra/Pedido a partir dos pedidos carregados */

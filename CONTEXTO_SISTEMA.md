@@ -1,6 +1,6 @@
 # 🧠 ARQUIVO DE CONTEXTO DEFINITIVO — GG TECH CRM (Conceito Vidros & Projetos)
 > System Prompt / Context File para uso em futuras conversas com IAs.
-> Última atualização: 2026-06-08 (nova página Controle de Pedidos + Fluxo Financeiro) · Mantido vivo a cada evolução do sistema.
+> Última atualização: 2026-06-15 (Aging List, Cartão de Crédito parcelado, Contas a Pagar Unificado, bug fix Infraestrutura) · Mantido vivo a cada evolução do sistema.
 
 ---
 
@@ -63,13 +63,13 @@ js/
 ### 2.4 Arquivos / Telas
 - **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível; ficha da visita com **WhatsApp + Google Maps + Waze** `https://www.waze.com/ul?q=...&navigate=yes`), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico). **Passo 1 inclui:** Desconto % (N2 — calcula valor final com `Math.round`, salva `desconto_pct` e `valor` arredondado), Técnico Responsável (N3 — obrigatório, salva `tecnico_responsavel`), Mídia/Origem (N4 — opcional, salva `midia_origem`).
 - **Responsividade:** os 3 HTML têm bloco `@media(max-width:640px)` (+400px) — body padding reduzido, abas/tabelas roláveis na horizontal, grids/forms em 1 coluna, modais 96vw, ficha de visita empilha botões. Mobile e desktop no mesmo arquivo (sem app separado).
-- **`faturamento.html`** — Núcleo financeiro com 3 abas no topo: **📊 Visão Obras** (custos/margem/lucro por pedido), **🏢 Gastos Fixos** (contas a pagar recorrentes) e **📉 Gastos Variáveis**. Inclui Health Dashboard, DRE comparativa e gráfico de fluxo de caixa semanal.
+- **`faturamento.html`** — Núcleo financeiro com **4 abas** no topo: **📊 Visão Obras** (custos/margem/lucro por pedido), **🏢 Gastos Fixos** (contas a pagar recorrentes), **📉 Gastos Variáveis** e **📋 Contas a Pagar** (nova — visão unificada, veja §2.6). Inclui Health Dashboard, DRE comparativa e gráfico de fluxo de caixa semanal.
   - **Recorrência por série (`serie_id`):** gasto fixo com "Replicar" gera a série do mês atual até dezembro (mesma `serie_id`); continua no virar do ano (`garantirSeriesDoAno`). **Editar/Excluir** abre diálogo de escopo: *Apenas este mês / Este e os próximos / Todos* (operações em massa **preservam meses já PAGOS**).
   - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal capturando **Data de Pagamento Real + Conta/Forma (Itaú/Nubank/Cartão Corporativo/Caixa Interno) + Comprovante**. O comprovante pode ser **upload de imagem/PDF do PIX** (vai p/ bucket privado `relatorios-tecnicos` prefixo `comprovantes/`, guarda o caminho; abre via signed URL com `abrirAnexoTecnico()`) ou um link colado.
   - **DRE:** botão "🔍 Tela cheia" abre modal full-screen (`dre-modal`) e **🖨️ Imprimir/PDF** (`imprimirDRE` abre nova janela com CSS A4 landscape).
   - **Ficha OS → 📄 Gerar PDF** *(2026-06-12 — substituiu o window.print e os toggles de impressão)*: botão único abre o **modal pré-PDF** (`ficha-pdf-modal`) que confere/completa dados (contato, mídia, consultor, técnico, nº/cidade/UF, datas, descritivo técnico, 2 fotos) — **salva tudo no lead** e chama `gerarFichaPDF(pedido)` (`js/modules/ficha-pdf.js`). PDF de **3 páginas A4 landscape**: OS (cliente+pagamentos+instalação), Termo de Garantia, Relatório Técnico (descritivo+fotos+painel lateral rotacionado). Fotos: bucket privado → signed URL → base64. Logo opcional em `assets/icon-conceito.png` (oculta-se se ausente).
   - **🛒 Custos Reais (Compras)** *(2026-06-12)*: boletos de fornecedores (`relatorio_despesas_os.total_despesas_lancadas`) entram **automaticamente** como dedução em: KPIs, tabela de obras (lucro/margem), Ficha OS (linha própria), Auditoria, Health Dashboard (`calcResumoMes` param `comprasMap`) e DRE (`calcDRE` param `comprasMap`). Mapa `_comprasMap[os_id]` carregado no `Promise.all` do `carregar()`.
-- **`pedidos.html`** *(nova, 2026-06-08)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). Três ações por linha:
+- **`pedidos.html`** *(nova, 2026-06-08; evoluída 2026-06-15)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). **4 abas de visão:** Ver Todos, Visão Anual, Visão Mensal e **💰 Contas a Receber** (Aging List — ver §2.7). Três ações por linha:
   - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas com `valor_reais`, saldo, observações, relatório técnico) e "Editar" (todos os campos + **editor completo de parcelas** com dual-mode % / R$, barra de progresso em tempo real, add/remove linhas). **Nº da OS é editável** *(2026-06-12)* — corrige duplicidade, cancelamento/renovação e erros de digitação sem excluir o pedido; ao salvar, alerta com `confirm()` se outra OS igual já existir (case-insensitive) e o toast mostra `OS alterada: antiga → nova`. Código do Orçamento permanece readonly. Botões: **🗑 Excluir Pedido** e **🗑 Remover Relatório**. `salvarEdicao()` persiste parcelas normalizadas no JSONB `leads.parcelas`.
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
   - **💰 Fluxo:** modal de caixa mostrando parcelas contratadas (JSONB) + movimentações registradas (`financeiro_movimentacoes`). Botão "Reg." em cada parcela pré-preenche o form. Permite upload de comprovante PIX (bucket privado, signed URL).
@@ -113,12 +113,31 @@ Colunas adicionadas: `dia_vencimento` (1–31), `status_pagamento`, `data_pagame
 - **Alertas nativos:** ao carregar, dispara `toast('⚠️ Atenção: Você tem X contas vencidas ou vencendo hoje!', 'warn')`; também avisa as que vencem nos próximos 3 dias.
 - **Visão de linha do tempo (fluxo de caixa):** gráfico de barras Chart.js **“Previsão de Saídas por Semana”** agrupando vencimentos não pagos em Sem 1 (1–7), Sem 2 (8–14), Sem 3 (15–21), Sem 4 (22–28), Sem 5 (29–31).
 
-### 3.4 Tabela `financeiro_movimentacoes` (nova)
+### 3.4 Tabela `financeiro_movimentacoes`
 Rastreia recebimentos e saídas **reais** vinculados a cada pedido:
-- **Colunas:** `id`, `lead_id` (FK→leads ON DELETE CASCADE), `descricao`, `tipo` ('Entrada'|'Saída'), `valor` NUMERIC(12,2), `data_movimentacao` DATE, `parcela_ref` (referência ao `condicao` da parcela JSONB), `forma_pagamento`, `comprovante_url` (caminho no bucket privado), `observacao`, `created_at`.
+- **Colunas:** `id`, `lead_id` (FK→leads ON DELETE CASCADE), `descricao`, `tipo` ('Entrada'|'Saída'), `valor` NUMERIC(12,2), `data_movimentacao` DATE, `data_vencimento` DATE *(novo 2026-06-15 — data de liquidação esperada da parcela de cartão)*, `status` TEXT DEFAULT 'Confirmado' *(novo — 'Confirmado' = dinheiro recebido; 'Pendente' = parcela de cartão futura aguardando liquidação)*, `taxa_cartao_valor` NUMERIC(10,2) DEFAULT 0 *(novo — taxa Stone/operadora descontada)*, `parcela_ref`, `forma_pagamento`, `comprovante_url`, `observacao`, `created_at`.
+- **Migration:** `migrations/2026-06-15_cartao_movimentacoes.sql` — adiciona `status`, `data_vencimento`, `taxa_cartao_valor`, índice `idx_movs_status_tipo`.
 - **RLS:** `FOR ALL TO authenticated USING(true) WITH CHECK(true)`. Índice em `lead_id`.
+- **Regra de negócio:** `calcValorReal()` e `valRecebido()` **filtram `status='Confirmado'`** (ou null = retrocompat = confirmado). Parcelas de cartão criadas como `status='Pendente'` não somam no "Valor Real Recebido" até o financeiro confirmar manualmente.
 - **Métodos em `financeiroService`:** `carregarMovimentacoes`, `carregarMovimentacoesPorLead`, `inserirMovimentacao`, `atualizarMovimentacao`, `deletarMovimentacao`, `calcValorReal(movs, leadIds)`, `calcSaidas(movs, leadIds)`.
-- **Valor Real no `faturamento.html`:** 5º KPI card **"Valor Real Recebido"** = soma das Entradas para os pedidos do mês (carregado em `_allMovsFat` junto com os outros dados no `Promise.all`).
+- **Valor Real no `faturamento.html`:** 5º KPI card **"Valor Real Recebido"** = soma das Entradas **Confirmadas** para os pedidos do mês.
+
+### 2.6 Contas a Pagar Unificado — aba 📋 em `faturamento.html`
+Nova aba `tab-contas-pagar` → `#view-contas-pagar`. Consolida 3 fontes de obrigações pendentes:
+1. **Boletos de Fornecedores** (de `boletos_fornecedores` via `comprasService.carregarOSComFornecedores()`, carregados em `_boletosCP` na startup)
+2. **Gastos Fixos** pendentes do mês (`_gastosCache` filtrado por `!isPago()`)
+3. **Gastos Variáveis** pendentes do mês (`_variaveisCache` filtrado por `status!='Pago'`)
+- **Quick-filters:** Todos Pendentes / ⏰ Vence Esta Semana / 🔴 Em Atraso
+- **KPIs:** Fornecedores (R$), Gastos Fixos (R$), Gastos Variáveis (R$), Total Vencido (R$)
+- **Tabela:** Origem (badge) | Descrição | Valor | Vencimento | Status — ordenada: Atrasados primeiro
+
+### 2.7 Contas a Receber / Aging List — aba 💰 em `pedidos.html`
+Nova aba `vtab-cobranca` → `#view-cobranca`. Usa dados já carregados (`_pedidos` + `_movimentacoes`).
+- **Campos:** Cliente, OS/Código, Valor Total, Já Pago, Saldo, Próx. Vencimento, Status
+- **Status derivado:** Quitado (excluído da lista) / Atrasado / Parcialmente Pago / Pendente
+- **Filtros:** busca livre, status, data início, data fim de vencimento
+- **KPIs:** Total a Receber, Saldo Vencido (R$), Clientes Parciais (qtd), Clientes em Dia (qtd)
+- **Ação:** botão 💰 Caixa abre o fluxo de caixa do pedido para registrar recebimento
 
 ### 3.3 DRE — Demonstração do Resultado do Exercício (comparativa)
 - **Formato:** matriz **linhas (contas) × colunas (12 meses + Acumulado do Ano)**, com **scroll horizontal** e 1ª coluna fixa. **Regime de competência**.

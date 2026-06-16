@@ -48,10 +48,12 @@ const financeiroService = {
   deletarMovimentacao(id){
     return db.from(TABLES.MOVIMENTACOES).delete().eq('id',id);
   },
-  /* Soma de Entradas para um array de lead_ids (pode ser Set ou Array) */
+  /* Soma de Entradas CONFIRMADAS para um array de lead_ids (pode ser Set ou Array).
+   * Parcelas de cartão com status='Pendente' não entram no valor real recebido. */
   calcValorReal(movimentacoes, leadIds){
     const ids = new Set(leadIds);
-    return (movimentacoes||[]).filter(m=>m.tipo==='Entrada' && ids.has(m.lead_id))
+    return (movimentacoes||[])
+      .filter(m=>m.tipo==='Entrada' && (m.status||'Confirmado')==='Confirmado' && ids.has(m.lead_id))
       .reduce((s,m)=>s+parseFloat(m.valor||0), 0);
   },
   /* ─────────── CATEGORIAS DINÂMICAS ─────────── */

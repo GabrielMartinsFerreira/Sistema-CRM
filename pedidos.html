@@ -222,6 +222,17 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .wiz-parcela-alert.err{background:rgba(240,81,106,.1);color:var(--red);border:1px solid rgba(240,81,106,.2)}
 .wiz-parcela-alert.ok{background:rgba(34,212,143,.1);color:var(--green);border:1px solid rgba(34,212,143,.25)}
 
+/* CARTÃO DE CRÉDITO MODAL */
+.cartao-taxa-row{display:flex;gap:8px;align-items:stretch}
+.cartao-taxa-tipo{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
+.taxa-btn{padding:8px 14px;background:var(--bg-input);border:none;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.taxa-btn.active{background:var(--accent);color:white}
+.parc-preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.parc-preview-table th{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;border-bottom:1px solid var(--border);text-align:left}
+.parc-preview-table td{padding:7px 8px;border-bottom:1px solid rgba(37,40,64,.4);font-family:'DM Mono',monospace;font-size:12px}
+.parc-preview-table tr:last-child td{border-bottom:none}
+.cartao-liquido-box{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin:12px 0;display:flex;justify-content:space-between;align-items:center}
+
 /* MOBILE */
 @media(max-width:640px){
   body{padding:10px}
@@ -273,13 +284,15 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 
 <!-- VIEW TABS -->
 <div class="view-tabs" id="view-tabs">
-  <button class="vtab active" id="vtab-todos"  onclick="setViewMode('todos')">&#128203; Ver Todos</button>
-  <button class="vtab"        id="vtab-anual"  onclick="setViewMode('anual')">&#128197; Visão Anual</button>
-  <button class="vtab"        id="vtab-mensal" onclick="setViewMode('mensal')">&#128199; Visão Mensal</button>
+  <button class="vtab active" id="vtab-todos"    onclick="setViewMode('todos')">&#128203; Ver Todos</button>
+  <button class="vtab"        id="vtab-anual"    onclick="setViewMode('anual')">&#128197; Visão Anual</button>
+  <button class="vtab"        id="vtab-mensal"   onclick="setViewMode('mensal')">&#128199; Visão Mensal</button>
+  <button class="vtab"        id="vtab-cobranca" onclick="setViewMode('cobranca')" style="border-color:rgba(245,197,66,.4);color:var(--yellow)">&#128184; Contas a Receber</button>
   <select id="sel-ano" class="period-sel" onchange="_filterYear=parseInt(this.value);renderTudo()"></select>
   <select id="sel-mes" class="period-sel" onchange="_filterMonth=parseInt(this.value);renderTudo()"></select>
 </div>
 
+<div id="view-pedidos-main">
 <!-- KPI CARDS -->
 <div class="kpi-row">
   <div class="kpi-card kc-total">
@@ -374,6 +387,154 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   <div id="pedidos-table-wrap"><div class="empty-msg">Carregando…</div></div>
 </div>
 
+</div><!-- /view-pedidos-main -->
+
+<!-- ═══ CONTAS A RECEBER / AGING LIST ═══ -->
+<div id="view-cobranca" style="display:none">
+  <!-- KPIs de cobrança -->
+  <div class="kpi-row" style="margin-bottom:16px">
+    <div class="kpi-card" style="border-left-color:var(--yellow)">
+      <div class="kpi-label">Total a Receber</div>
+      <div class="kpi-value" id="cb-k-total" style="color:var(--yellow)">—</div>
+      <div class="kpi-sub">saldo pendente de todos os clientes</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--red)">
+      <div class="kpi-label">Saldo Vencido</div>
+      <div class="kpi-value" id="cb-k-vencido" style="color:var(--red)">—</div>
+      <div class="kpi-sub">parcelas com vencimento passado</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--blue)">
+      <div class="kpi-label">Parcialmente Pago</div>
+      <div class="kpi-value" id="cb-k-parcial" style="color:var(--blue)">—</div>
+      <div class="kpi-sub">clientes com pagamentos parciais</div>
+    </div>
+    <div class="kpi-card" style="border-left-color:var(--green)">
+      <div class="kpi-label">Clientes em Dia</div>
+      <div class="kpi-value" id="cb-k-emdia" style="color:var(--green)">—</div>
+      <div class="kpi-sub">sem saldo ou dentro do prazo</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar">
+      <div class="filter-group" style="flex:2;min-width:200px">
+        <label>Buscar cliente / OS</label>
+        <input type="text" id="cb-busca" class="filter-input" placeholder="Nome, OS, código…" oninput="renderCobranca()">
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="cb-status" class="filter-select" onchange="renderCobranca()">
+          <option value="">Todos</option>
+          <option value="Atrasado">🔴 Atrasado</option>
+          <option value="Parcialmente Pago">🟡 Parcialmente Pago</option>
+          <option value="Pendente">⚪ Pendente</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Vencimento De</label>
+        <input type="date" id="cb-data-ini" class="filter-input" onchange="renderCobranca()">
+      </div>
+      <div class="filter-group">
+        <label>Vencimento Até</label>
+        <input type="date" id="cb-data-fim" class="filter-input" onchange="renderCobranca()">
+      </div>
+      <button class="btn-clear-filter" onclick="limparFiltrosCobranca()">✕ Limpar</button>
+    </div>
+  </div>
+
+  <!-- Tabela aging -->
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>💰 Contas a Receber — Aging List</span>
+      <span id="cb-count-badge" style="font-size:11px;color:var(--text-muted);font-weight:600"></span>
+    </div>
+    <div id="cobranca-table-wrap"><div class="empty-msg">Carregando…</div></div>
+  </div>
+</div><!-- /view-cobranca -->
+
+
+<!-- ═══════════════════════════════════════════════
+     MODAL — Cartão de Crédito (parcelamento)
+═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="cartao-modal">
+<div class="modal" style="max-width:520px">
+  <div class="modal-header">
+    <div class="modal-title" style="gap:10px">💳 Pagamento por Cartão de Crédito</div>
+    <button class="btn-modal-close" onclick="fecharCartaoModal()">✕</button>
+  </div>
+
+  <!-- Resumo do lançamento -->
+  <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Lançamento</div>
+    <div id="cartao-resumo" style="color:var(--text)">—</div>
+  </div>
+
+  <!-- Taxa do cartão -->
+  <div class="form-group">
+    <label>Taxa da Operadora (Stone / Cielo)</label>
+    <div class="cartao-taxa-row">
+      <div class="cartao-taxa-tipo">
+        <button class="taxa-btn active" id="taxa-btn-pct" onclick="setTaxaTipo('pct')">%</button>
+        <button class="taxa-btn" id="taxa-btn-rs" onclick="setTaxaTipo('rs')">R$</button>
+      </div>
+      <input type="number" id="cartao-taxa-val" class="form-control" min="0" step="0.01" placeholder="0" oninput="atualizarPreviewCartao()" style="flex:1">
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Taxa descontada antes de dividir as parcelas. Deixe 0 se não houver taxa.</div>
+  </div>
+
+  <!-- Valor líquido calculado -->
+  <div class="cartao-liquido-box">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Valor Bruto</div>
+      <div id="cartao-bruto" style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">—</div>
+    </div>
+    <div style="color:var(--text-muted);font-size:18px">−</div>
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Taxa</div>
+      <div id="cartao-taxa-display" style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--red)">R$ 0,00</div>
+    </div>
+    <div style="color:var(--text-muted);font-size:18px">=</div>
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Valor Líquido</div>
+      <div id="cartao-liquido" style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--green)">—</div>
+    </div>
+  </div>
+
+  <!-- Parcelamento -->
+  <div class="form-row">
+    <div class="form-group">
+      <label>Número de Parcelas</label>
+      <select id="cartao-parcelas" class="form-control" onchange="atualizarPreviewCartao()">
+        <option value="1">1× (à vista)</option>
+        <option value="2">2×</option>
+        <option value="3">3×</option>
+        <option value="4">4×</option>
+        <option value="5">5×</option>
+        <option value="6">6×</option>
+        <option value="7">7×</option>
+        <option value="8">8×</option>
+        <option value="9">9×</option>
+        <option value="10">10×</option>
+        <option value="11">11×</option>
+        <option value="12">12×</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Data da 1ª Parcela</label>
+      <input type="date" id="cartao-data-1" class="form-control" oninput="atualizarPreviewCartao()">
+    </div>
+  </div>
+
+  <!-- Preview das parcelas -->
+  <div id="cartao-preview-wrap" style="max-height:220px;overflow-y:auto;margin-bottom:4px"></div>
+
+  <div class="modal-footer">
+    <button class="btn btn-cancel-modal" onclick="fecharCartaoModal()">Cancelar</button>
+    <button class="btn btn-primary" id="btn-confirmar-cartao" onclick="confirmarCartaoModal()">✓ Gerar Parcelamento</button>
+  </div>
+</div>
+</div>
 
 <!-- ═══════════════════════════════════════════════
      MODAL 1 — Detalhes / Editar Pedido
@@ -665,7 +826,8 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
           <option value="Pix">💸 Pix</option>
           <option value="Dinheiro">💵 Dinheiro</option>
           <option value="Transferência">🏦 Transferência</option>
-          <option value="Cartão">💳 Cartão</option>
+          <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+          <option value="Cartão de Débito">💳 Cartão de Débito</option>
           <option value="Boleto">📄 Boleto</option>
           <option value="Cheque">✉️ Cheque</option>
         </select>
@@ -738,7 +900,9 @@ function getPedido(id){ return _pedidos.find(p=>p.id===id); }
 function movPedido(leadId){ return _movimentacoes.filter(m=>m.lead_id===leadId); }
 
 function valRecebido(leadId){
-  return movPedido(leadId).filter(m=>m.tipo==='Entrada')
+  // Conta apenas Entradas com status 'Confirmado' (ou null/undefined = legado = confirmado)
+  return movPedido(leadId)
+    .filter(m=>m.tipo==='Entrada'&&(m.status||'Confirmado')==='Confirmado')
     .reduce((s,m)=>s+parseFloat(m.valor||0),0);
 }
 
@@ -872,11 +1036,133 @@ function renderTudo(){
   atualizarViewUI();
 }
 
+/* ─── Contas a Receber / Aging List ─────────────────── */
+function limparFiltrosCobranca(){
+  ['cb-busca','cb-data-ini','cb-data-fim'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('cb-status').value='';
+  renderCobranca();
+}
+
+function renderCobranca(){
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const hojeStr=hoje.toISOString().slice(0,10);
+
+  const busca=(document.getElementById('cb-busca')?.value||'').toLowerCase().trim();
+  const filtSt=document.getElementById('cb-status')?.value||'';
+  const dataIni=document.getElementById('cb-data-ini')?.value||'';
+  const dataFim=document.getElementById('cb-data-fim')?.value||'';
+
+  // Deriva status de cobrança de cada pedido
+  function statusCobranca(p){
+    const total=parseFloat(p.valor||0);
+    const pago=valRecebido(p.id);
+    const saldo=total-pago;
+    if(saldo<=0) return 'Quitado';
+    // Verifica parcelas vencidas
+    const parc=parseParcelas(p);
+    const temVencida=parc.some(pc=>{
+      if(!pc.data_vencimento) return false;
+      return pc.data_vencimento<hojeStr;
+    });
+    if(temVencida||(pago===0&&total>0&&p.data_aprovacao&&p.data_aprovacao<hojeStr)) return 'Atrasado';
+    if(pago>0&&saldo>0) return 'Parcialmente Pago';
+    return 'Pendente';
+  }
+
+  // Próxima parcela em aberto
+  function proxVencimento(p){
+    const parc=parseParcelas(p);
+    const sorted=parc.filter(pc=>pc.data_vencimento).sort((a,b)=>a.data_vencimento.localeCompare(b.data_vencimento));
+    return sorted.length?sorted[0].data_vencimento:p.data_aprovacao||null;
+  }
+
+  let rows=_pedidos.map(p=>{
+    const total=parseFloat(p.valor||0);
+    const pago=valRecebido(p.id);
+    const saldo=total-pago;
+    const st=statusCobranca(p);
+    const venc=proxVencimento(p);
+    return {p,total,pago,saldo,st,venc};
+  }).filter(r=>r.st!=='Quitado');
+
+  // Filtros
+  if(busca) rows=rows.filter(r=>{
+    const n=(r.p.nome||r.p.razao_social||r.p.nome_contato||'').toLowerCase();
+    const os=(r.p.os||r.p.codigo_orcamento||'').toLowerCase();
+    return n.includes(busca)||os.includes(busca);
+  });
+  if(filtSt) rows=rows.filter(r=>r.st===filtSt);
+  if(dataIni) rows=rows.filter(r=>r.venc&&r.venc>=dataIni);
+  if(dataFim) rows=rows.filter(r=>r.venc&&r.venc<=dataFim);
+
+  // KPIs
+  const totalRec=rows.reduce((s,r)=>s+r.saldo,0);
+  const vencido=rows.filter(r=>r.st==='Atrasado').reduce((s,r)=>s+r.saldo,0);
+  const parcial=rows.filter(r=>r.st==='Parcialmente Pago').length;
+  const emDia=rows.filter(r=>r.st==='Pendente').length;
+  const g=id=>document.getElementById(id);
+  if(g('cb-k-total'))   g('cb-k-total').textContent=brl(totalRec);
+  if(g('cb-k-vencido')) g('cb-k-vencido').textContent=brl(vencido);
+  if(g('cb-k-parcial')) g('cb-k-parcial').textContent=parcial;
+  if(g('cb-k-emdia'))   g('cb-k-emdia').textContent=emDia;
+  if(g('cb-count-badge')) g('cb-count-badge').textContent=`${rows.length} cliente${rows.length!==1?'s':''} com saldo`;
+
+  const wrap=g('cobranca-table-wrap');
+  if(!wrap) return;
+  if(!rows.length){
+    wrap.innerHTML='<div class="empty-msg">Nenhum cliente com saldo pendente nos filtros selecionados.</div>';
+    return;
+  }
+
+  // Ordenar: Atrasado > Parcialmente Pago > Pendente, depois por valor desc
+  const stOrd={Atrasado:0,'Parcialmente Pago':1,Pendente:2};
+  rows.sort((a,b)=>(stOrd[a.st]||9)-(stOrd[b.st]||9)||(b.saldo-a.saldo));
+
+  const stBadge={
+    'Atrasado':'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.3)">🔴 Atrasado</span>',
+    'Parcialmente Pago':'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,197,66,.3)">🟡 Parcial</span>',
+    'Pendente':'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-card2);color:var(--text-muted);border:1px solid var(--border)">⚪ Pendente</span>'
+  };
+
+  const trs=rows.map(({p,total,pago,saldo,st,venc})=>{
+    const nome=esc(p.nome||p.razao_social||p.nome_contato||'—');
+    const os=p.os||p.codigo_orcamento||('#'+p.id);
+    const vencTxt=venc?venc.split('-').reverse().join('/'):'—';
+    const vencCls=st==='Atrasado'?'style="color:var(--red);font-weight:700"':'';
+    const pct=total>0?Math.round(pago/total*100):0;
+    return `<tr>
+      <td><span style="font-weight:600">${nome}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${esc(os)}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:600">${brl(total)}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green);font-weight:600">${brl(pago)}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--yellow);font-weight:700">${brl(saldo)}</td>
+      <td ${vencCls}>${vencTxt}</td>
+      <td>${stBadge[st]||st}</td>
+      <td><button class="btn-act btn-caixa" onclick="abrirFluxo(${p.id})">💰 Caixa</button></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML=`<div style="overflow-x:auto"><table class="pedidos-table"><thead><tr>
+    <th>Cliente</th><th>OS / Código</th><th>Valor Total</th><th>Já Pago</th>
+    <th>Saldo</th><th>Próx. Vencimento</th><th>Status</th><th></th>
+  </tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
 /* ─── View Mode ─────────────────────────────────────── */
 const MESES_PT=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function setViewMode(mode){
   _viewMode=mode;
+  if(mode==='cobranca'){
+    document.getElementById('view-pedidos-main').style.display='none';
+    document.getElementById('view-cobranca').style.display='';
+    ['todos','anual','mensal'].forEach(m=>{const b=document.getElementById('vtab-'+m);if(b)b.classList.remove('active');});
+    const bc=document.getElementById('vtab-cobranca');if(bc)bc.classList.add('active');
+    renderCobranca();
+    return;
+  }
+  document.getElementById('view-pedidos-main').style.display='';
+  document.getElementById('view-cobranca').style.display='none';
   if(mode!=='todos'){
     const now=new Date();
     _filterYear=now.getFullYear();
@@ -886,7 +1172,7 @@ function setViewMode(mode){
 }
 
 function atualizarViewUI(){
-  ['todos','anual','mensal'].forEach(function(m){
+  ['todos','anual','mensal','cobranca'].forEach(function(m){
     const btn=document.getElementById('vtab-'+m);
     if(btn)btn.classList.toggle('active',_viewMode===m);
   });
@@ -1479,6 +1765,14 @@ async function adicionarMovimentacao(){
   const obs     =document.getElementById('mov-obs').value.trim();
   const fileEl  =document.getElementById('mov-file');
 
+  // Intercepta Cartão de Crédito: abre modal de parcelamento antes de salvar
+  if(tipo==='Entrada'&&forma==='Cartão de Crédito'){
+    if(!desc){toast('Informe a descrição antes de parcelar','err');return;}
+    if(valor<=0){toast('Informe um valor válido antes de parcelar','err');return;}
+    abrirCartaoModal(leadId,valor,desc,data,parRef,obs);
+    return;
+  }
+
   if(!desc){toast('Informe a descrição','err');return;}
   if(valor<=0){toast('Informe um valor válido','err');return;}
 
@@ -1550,6 +1844,135 @@ async function abrirComprovante(ref){
   if(!/^https:\/\//i.test(url)){toast('URL inválida ou protocolo não permitido','err');return;}
   const win=window.open(url,'_blank','noopener,noreferrer');
   if(!win)toast('Pop-up bloqueado — permita pop-ups neste site','err');
+}
+
+/* ─── Modal Cartão de Crédito ───────────────────────── */
+let _cartaoCtx={};   // contexto do lançamento pendente
+let _taxaTipo='pct'; // 'pct' | 'rs'
+
+function abrirCartaoModal(leadId,valor,desc,data,parRef,obs){
+  _cartaoCtx={leadId,valor,desc,data,parRef,obs};
+  _taxaTipo='pct';
+  document.getElementById('taxa-btn-pct').classList.add('active');
+  document.getElementById('taxa-btn-rs').classList.remove('active');
+  document.getElementById('cartao-taxa-val').value='';
+  document.getElementById('cartao-parcelas').value='1';
+  // Data padrão = hoje + 30 dias
+  const d=new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('cartao-data-1').value=d.toISOString().slice(0,10);
+  const p=getPedido(leadId);
+  const clienteNome=p?(p.nome||p.razao_social||p.nome_contato||'—'):'—';
+  document.getElementById('cartao-resumo').innerHTML=
+    `<strong>${esc(desc)}</strong> · ${brl(valor)} · Cliente: ${esc(clienteNome)}`;
+  atualizarPreviewCartao();
+  document.getElementById('cartao-modal').classList.add('open');
+}
+
+function fecharCartaoModal(){
+  document.getElementById('cartao-modal').classList.remove('open');
+  _cartaoCtx={};
+}
+
+function setTaxaTipo(tipo){
+  _taxaTipo=tipo;
+  document.getElementById('taxa-btn-pct').classList.toggle('active',tipo==='pct');
+  document.getElementById('taxa-btn-rs').classList.toggle('active',tipo==='rs');
+  document.getElementById('cartao-taxa-val').placeholder=tipo==='pct'?'Ex: 2.5':'Ex: 45.00';
+  atualizarPreviewCartao();
+}
+
+function atualizarPreviewCartao(){
+  const bruto=_cartaoCtx.valor||0;
+  const taxaInput=parseFloat(document.getElementById('cartao-taxa-val').value)||0;
+  const taxaValor=_taxaTipo==='pct'?bruto*taxaInput/100:taxaInput;
+  const liquido=Math.max(0,bruto-taxaValor);
+  const n=parseInt(document.getElementById('cartao-parcelas').value)||1;
+  const data1=document.getElementById('cartao-data-1').value;
+
+  document.getElementById('cartao-bruto').textContent=brl(bruto);
+  document.getElementById('cartao-taxa-display').textContent=brl(taxaValor);
+  document.getElementById('cartao-liquido').textContent=brl(liquido);
+
+  if(!data1||!liquido){
+    document.getElementById('cartao-preview-wrap').innerHTML=
+      '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Preencha a data da 1ª parcela para ver o cronograma.</div>';
+    return;
+  }
+
+  const valParc=Math.round(liquido/n*100)/100;
+  const ajuste=Math.round((liquido-(valParc*n))*100)/100; // centavos de arredondamento
+  const [y,m,d]=data1.split('-').map(Number);
+
+  let rows='';
+  for(let i=0;i<n;i++){
+    const dt=new Date(y,m-1+i,d);
+    const dtStr=dt.toISOString().slice(0,10);
+    const dtFmt=dtStr.split('-').reverse().join('/');
+    const val=(i===n-1)?Math.round((valParc+ajuste)*100)/100:valParc;
+    rows+=`<tr><td style="color:var(--text-muted)">${i+1}/${n}</td><td>${dtFmt}</td>
+      <td style="color:var(--green);font-weight:600">${brl(val)}</td>
+      <td style="color:var(--text-muted);font-size:10px">Pendente (cartão)</td></tr>`;
+  }
+  document.getElementById('cartao-preview-wrap').innerHTML=
+    `<table class="parc-preview-table"><thead><tr>
+      <th>Parcela</th><th>Vencimento</th><th>Valor Líquido</th><th>Status</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function confirmarCartaoModal(){
+  const {leadId,valor,desc,data,parRef,obs}=_cartaoCtx;
+  if(!leadId){fecharCartaoModal();return;}
+  const taxaInput=parseFloat(document.getElementById('cartao-taxa-val').value)||0;
+  const taxaValor=_taxaTipo==='pct'?valor*taxaInput/100:taxaInput;
+  const liquido=Math.max(0,valor-taxaValor);
+  const n=parseInt(document.getElementById('cartao-parcelas').value)||1;
+  const data1=document.getElementById('cartao-data-1').value;
+  if(!data1){toast('Informe a data da 1ª parcela','err');return;}
+
+  const btn=document.getElementById('btn-confirmar-cartao');
+  btn.disabled=true;btn.textContent='Salvando…';
+
+  const valParc=Math.round(liquido/n*100)/100;
+  const ajuste=Math.round((liquido-(valParc*n))*100)/100;
+  const [y,m,d]=data1.split('-').map(Number);
+
+  try{
+    for(let i=0;i<n;i++){
+      const dt=new Date(y,m-1+i,d);
+      const dtStr=dt.toISOString().slice(0,10);
+      const val=(i===n-1)?Math.round((valParc+ajuste)*100)/100:valParc;
+      const dados={
+        lead_id:leadId,
+        tipo:'Entrada',
+        descricao:`${desc} [Cartão ${i+1}/${n}]`,
+        valor:val,
+        data_movimentacao:dtStr,
+        data_vencimento:dtStr,
+        forma_pagamento:'Cartão de Crédito',
+        status:'Pendente',
+        taxa_cartao_valor:i===0?taxaValor:0,
+        parcela_ref:parRef||null,
+        observacao:obs||null,
+        comprovante_url:null
+      };
+      const{data:novaRow,error}=await financeiroService.inserirMovimentacao(dados);
+      if(error)throw error;
+      if(novaRow)_movimentacoes.unshift(novaRow);
+    }
+    // Limpa o form do caixa
+    ['mov-desc','mov-valor','mov-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('mov-forma').value='';
+    document.getElementById('mov-parcela').value='';
+    toast(`✅ ${n} parcela${n>1?'s':''} de cartão lançada${n>1?'s':''} como Pendente!`,'ok');
+    fecharCartaoModal();
+    if(_caixaPedidoId)renderCaixaModal(_caixaPedidoId);
+    renderTudo();
+    if(_viewMode==='cobranca')renderCobranca();
+  }catch(e){
+    toast('Erro ao salvar parcelamento: '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent='✓ Gerar Parcelamento';
+  }
 }
 
 /* ─── Editor de parcelas (aba Editar) ───────────────── */
@@ -1714,13 +2137,14 @@ async function removerRelatorio(leadId){
 
 /* ─── Overlay close ──────────────────────────────────── */
 document.addEventListener('click',e=>{
-  ['modal-detalhe','modal-os','modal-caixa'].forEach(id=>{
+  ['modal-detalhe','modal-os','modal-caixa','cartao-modal'].forEach(id=>{
     const modal=document.getElementById(id);
     if(e.target===modal){
       modal.classList.remove('open');
       if(id==='modal-os')_modalPedidoId=null;
       if(id==='modal-detalhe')_editPedidoId=null;
       if(id==='modal-caixa')_caixaPedidoId=null;
+      if(id==='cartao-modal')_cartaoCtx={};
     }
   });
 });
