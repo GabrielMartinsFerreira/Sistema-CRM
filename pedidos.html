@@ -278,6 +278,25 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   .parcela-row>input[type="text"]{grid-area:2/1/3/3}
   .parcela-row>input[type="date"]{grid-area:2/3/3/4}
 }
+/* ─── P4 FILA DE COBRANÇA ────────────────────────────────────────── */
+.prom-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px;margin-top:4px}
+.prom-ativa{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(56,189,248,.25)}
+.prom-quebrada{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.25)}
+.prom-contato{background:var(--bg-card2);color:var(--text-muted);border:1px solid var(--border)}
+.btn-cobrar{background:var(--yellow-dim);border-color:rgba(245,197,66,.3);color:var(--yellow)}
+.btn-cobrar:hover{background:var(--yellow);color:#0c0e16;border-color:var(--yellow)}
+.fila-prio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.fila-prio-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.fila-prio-num{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;margin-bottom:2px}
+.fila-prio-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.cob-tipo-sel{display:flex;gap:6px;margin-bottom:16px}
+.cob-tipo-btn{flex:1;padding:10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.cob-tipo-btn.active-contato{background:var(--accent-glow);border-color:var(--accent);color:var(--text)}
+.cob-tipo-btn.active-promessa{background:var(--yellow-dim);border-color:rgba(245,197,66,.4);color:var(--yellow)}
+.cob-hist-item{padding:10px 12px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px}
+.cob-hist-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:4px}
+.cob-hist-desc{font-size:12px;color:var(--text-dim)}
+.cob-hist-prom{font-size:12px;color:var(--yellow);font-weight:700;margin-top:3px}
 @media(max-width:400px){
   .kpi-row{grid-template-columns:1fr}
 }
@@ -412,6 +431,21 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 
 <!-- ═══ CONTAS A RECEBER / AGING LIST ═══ -->
 <div id="view-cobranca" style="display:none">
+  <!-- Fila Prioritária -->
+  <div class="fila-prio" id="fila-prio-cards">
+    <div class="fila-prio-card" style="border-color:rgba(240,81,106,.35)">
+      <div class="fila-prio-num" style="color:var(--red)"   id="fp-quebradas">0</div>
+      <div class="fila-prio-label">Promessas Quebradas</div>
+    </div>
+    <div class="fila-prio-card" style="border-color:rgba(245,197,66,.35)">
+      <div class="fila-prio-num" style="color:var(--yellow)" id="fp-vencendo">0</div>
+      <div class="fila-prio-label">Vencem em 3 dias</div>
+    </div>
+    <div class="fila-prio-card" style="border-color:rgba(251,146,60,.35)">
+      <div class="fila-prio-num" style="color:var(--orange)" id="fp-semcontato">0</div>
+      <div class="fila-prio-label">Atrasados s/ Contato</div>
+    </div>
+  </div>
   <!-- KPIs de cobrança -->
   <div class="kpi-row" style="margin-bottom:16px">
     <div class="kpi-card" style="border-left-color:var(--yellow)">
@@ -915,6 +949,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 <script src="js/core/auth.js"></script>
 <script src="js/services/crmService.js"></script>
 <script src="js/services/financeiroService.js"></script>
+<script src="js/services/cobrancaService.js"></script>
 
 <script>
 /* db, TABLES → supabase.js | esc, brl, fmtDate, toast → utils.js
@@ -925,6 +960,9 @@ const V_COLORS_P = { Gabriel:'#5b6ef5', Camille:'#f77082', Lilian:'#22d48f' };
 /* ─── State ─────────────────────────────────────────── */
 let _pedidos       = [];
 let _movimentacoes = [];
+let _promessas     = [];   // promessas_pagamento — carregado no init
+let _cobrancaLeadId = null;
+let _cobrancaTipo   = 'contato';
 let _fatMap        = {};
 let _filtered      = [];
 
@@ -994,6 +1032,7 @@ async function carregarDados(){
     _movimentacoes=r3.data||[];
     preencherFiltroVendedor();
     renderTudo();
+    cobrancaService.carregarTodas().then(({data})=>{ _promessas=data||[]; if(_viewMode==='cobranca')renderCobranca(); });
   }catch(e){
     document.getElementById('pedidos-table-wrap').innerHTML=`<div class="empty-msg">Erro ao carregar: ${esc(e.message)}</div>`;
     console.error(e);
@@ -1178,12 +1217,34 @@ function renderCobranca(){
     'Pendente':'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-card2);color:var(--text-muted);border:1px solid var(--border)">⚪ Pendente</span>'
   };
 
+  // Fila Prioritária
+  const em3str=(()=>{const d=new Date();d.setDate(d.getDate()+3);return d.toISOString().slice(0,10);})();
+  const fpQuebradas   =_promessas.filter(p=>cobrancaService.isQuebrada(p,hojeStr)).length;
+  const fpVencendo    =_promessas.filter(p=>p.tipo==='promessa'&&p.status==='pendente'&&p.data_prometida&&p.data_prometida>=hojeStr&&p.data_prometida<=em3str).length;
+  const fpSemContato  =rows.filter(r=>r.st==='Atrasado'&&!cobrancaService.getUltimoContato(r.p.id,_promessas)).length;
+  if(g('fp-quebradas'))  g('fp-quebradas').textContent=fpQuebradas;
+  if(g('fp-vencendo'))   g('fp-vencendo').textContent=fpVencendo;
+  if(g('fp-semcontato')) g('fp-semcontato').textContent=fpSemContato;
+
   const trs=rows.map(({p,total,pago,saldo,st,venc})=>{
     const nome=esc(p.nome||p.razao_social||p.nome_contato||'—');
     const os=p.os||p.codigo_orcamento||('#'+p.id);
     const vencTxt=venc?venc.split('-').reverse().join('/'):'—';
     const vencCls=st==='Atrasado'?'style="color:var(--red);font-weight:700"':'';
-    const pct=total>0?Math.round(pago/total*100):0;
+    // Promise badge
+    const prom=cobrancaService.getPromessaAtiva(p.id,_promessas);
+    const isQue=cobrancaService.isQuebrada(prom,hojeStr);
+    const ult=cobrancaService.getUltimoContato(p.id,_promessas);
+    let promBadge='';
+    if(prom){
+      const df=prom.data_prometida.split('-').reverse().join('/');
+      promBadge=isQue
+        ?`<div><span class="prom-badge prom-quebrada">⚠️ Prom. vencida ${df}</span></div>`
+        :`<div><span class="prom-badge prom-ativa">🤝 ${df}</span></div>`;
+    }else if(ult){
+      const dc=new Date(ult.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      promBadge=`<div><span class="prom-badge prom-contato">📞 ${dc}</span></div>`;
+    }
     return `<tr>
       <td><span style="font-weight:600">${nome}</span></td>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)">${esc(os)}</td>
@@ -1191,14 +1252,17 @@ function renderCobranca(){
       <td style="font-family:'DM Mono',monospace;color:var(--green);font-weight:600">${brl(pago)}</td>
       <td style="font-family:'DM Mono',monospace;color:var(--yellow);font-weight:700">${brl(saldo)}</td>
       <td ${vencCls}>${vencTxt}</td>
-      <td>${stBadge[st]||st}</td>
-      <td><button class="btn-act btn-caixa" onclick="abrirFluxo(${p.id})">💰 Caixa</button></td>
+      <td>${stBadge[st]||st}${promBadge}</td>
+      <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn-act btn-caixa"   onclick="abrirFluxo(${p.id})">💰 Caixa</button>
+        <button class="btn-act btn-cobrar"  onclick="abrirCobranca(${p.id})">📞 Cobrar</button>
+      </div></td>
     </tr>`;
   }).join('');
 
   wrap.innerHTML=`<div style="overflow-x:auto"><table class="pedidos-table"><thead><tr>
     <th>Cliente</th><th>OS / Código</th><th>Valor Total</th><th>Já Pago</th>
-    <th>Saldo</th><th>Próx. Vencimento</th><th>Status</th><th></th>
+    <th>Saldo</th><th>Próx. Vencimento</th><th>Status / Cobrança</th><th></th>
   </tr></thead><tbody>${trs}</tbody></table></div>`;
 }
 
@@ -2459,6 +2523,170 @@ document.addEventListener('click',e=>{
 
 /* ─── Init ───────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded',carregarDados);
+
+/* ═══════════════════════════════════════════════════════
+ * P4 — Fila de Cobrança + Promessas
+ * ═══════════════════════════════════════════════════════ */
+function abrirCobranca(leadId){
+  const p=getPedido(leadId); if(!p) return;
+  _cobrancaLeadId=leadId;
+  const nome=p.nome||p.razao_social||p.nome_contato||'—';
+  const os=p.os||p.codigo_orcamento||('#'+p.id);
+  const saldo=parseFloat(p.valor||0)-valRecebido(leadId);
+  document.getElementById('cob-cliente-nome').textContent=nome;
+  document.getElementById('cob-cliente-meta').textContent=`OS: ${os} · Saldo: ${brl(saldo)}`;
+  // Pré-preenche data prometida = hoje + 3 dias
+  const d=new Date(); d.setDate(d.getDate()+3);
+  document.getElementById('cob-data-prom').value=d.toISOString().slice(0,10);
+  document.getElementById('cob-vlr-prom').value='';
+  document.getElementById('cob-desc-contato').value='';
+  document.getElementById('cob-desc-prom').value='';
+  setCobrancaTipo('contato');
+  renderHistoricoCobranca();
+  document.getElementById('cobranca-modal').classList.add('open');
+}
+
+function fecharCobranca(){
+  document.getElementById('cobranca-modal').classList.remove('open');
+  _cobrancaLeadId=null;
+}
+
+function setCobrancaTipo(tipo){
+  _cobrancaTipo=tipo;
+  const isCon=tipo==='contato';
+  document.getElementById('cob-form-contato').style.display=isCon?'':'none';
+  document.getElementById('cob-form-promessa').style.display=isCon?'none':'';
+  document.getElementById('cob-btn-contato').className='cob-tipo-btn'+(isCon?' active-contato':'');
+  document.getElementById('cob-btn-promessa').className='cob-tipo-btn'+(!isCon?' active-promessa':'');
+}
+
+async function confirmarContato(){
+  if(!_cobrancaLeadId) return;
+  const desc=document.getElementById('cob-desc-contato').value.trim();
+  const{error}=await cobrancaService.registrar({
+    leadId:_cobrancaLeadId, tipo:'contato', descricao:desc||'Contato registrado'
+  });
+  if(error){toast('Erro: '+error.message,'err');return;}
+  const{data}=await cobrancaService.carregarTodas();
+  _promessas=data||[];
+  renderHistoricoCobranca();
+  renderCobranca();
+  toast('📝 Contato registrado','ok');
+}
+
+async function confirmarPromessa(){
+  if(!_cobrancaLeadId) return;
+  const dataProm=document.getElementById('cob-data-prom').value;
+  if(!dataProm){toast('Informe a data prometida','err');return;}
+  const vlr=parseFloat(document.getElementById('cob-vlr-prom').value)||null;
+  const desc=document.getElementById('cob-desc-prom').value.trim();
+  const{error}=await cobrancaService.registrar({
+    leadId:_cobrancaLeadId, tipo:'promessa',
+    descricao:desc||null, valorPrometido:vlr, dataPrometida:dataProm
+  });
+  if(error){toast('Erro: '+error.message,'err');return;}
+  const{data}=await cobrancaService.carregarTodas();
+  _promessas=data||[];
+  renderHistoricoCobranca();
+  renderCobranca();
+  toast('🤝 Promessa registrada','ok');
+}
+
+async function marcarPromessaStatus(id, status){
+  const{error}=await cobrancaService.marcarStatus(id, status);
+  if(error){toast('Erro: '+error.message,'err');return;}
+  const{data}=await cobrancaService.carregarTodas();
+  _promessas=data||[];
+  renderHistoricoCobranca();
+  renderCobranca();
+  toast('✅ Status atualizado','ok');
+}
+
+function renderHistoricoCobranca(){
+  const container=document.getElementById('cob-historico'); if(!container) return;
+  const items=cobrancaService.getPorLead(_cobrancaLeadId,_promessas);
+  if(!items.length){
+    container.innerHTML='<div style="text-align:center;padding:16px;font-size:12px;color:var(--text-muted)">Nenhum registro ainda.</div>';
+    return;
+  }
+  const hojeStr=new Date().toISOString().slice(0,10);
+  container.innerHTML=items.map(it=>{
+    const dt=new Date(it.created_at);
+    const dtStr=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})
+      +' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const isQue=cobrancaService.isQuebrada(it,hojeStr);
+    const tipoBadge=it.tipo==='promessa'
+      ?`<span style="color:var(--yellow);font-weight:700">🤝 Promessa</span>`
+      :`<span style="color:var(--text-dim)">📝 Contato</span>`;
+    const stBit=it.status!=='pendente'
+      ?` · <span style="color:${it.status==='cumprida'?'var(--green)':'var(--red)'}">${it.status}</span>`
+      :(isQue?' · <span style="color:var(--red)">⚠️ quebrada</span>':'');
+    const promInfo=it.tipo==='promessa'&&it.data_prometida
+      ?`<div class="cob-hist-prom">Para: ${it.data_prometida.split('-').reverse().join('/')}${it.valor_prometido?' · '+brl(it.valor_prometido):''}</div>`:'';
+    const acoes=it.tipo==='promessa'&&it.status==='pendente'
+      ?`<div style="margin-top:6px;display:flex;gap:6px">
+          <button class="btn-act" style="font-size:10px;padding:3px 8px;background:var(--green-dim);color:var(--green);border-color:rgba(34,212,143,.3)" onclick="marcarPromessaStatus(${it.id},'cumprida')">✓ Cumprida</button>
+          <button class="btn-act" style="font-size:10px;padding:3px 8px;background:var(--red-dim);color:var(--red);border-color:rgba(240,81,106,.3)" onclick="marcarPromessaStatus(${it.id},'quebrada')">✗ Quebrada</button>
+        </div>`:'';
+    return `<div class="cob-hist-item">
+      <div class="cob-hist-meta"><span>${tipoBadge}${stBit}</span><span>${dtStr}</span></div>
+      ${it.descricao?`<div class="cob-hist-desc">${esc(it.descricao)}</div>`:''}
+      ${promInfo}${acoes}
+    </div>`;
+  }).join('');
+}
 </script>
+
+<!-- MODAL COBRANÇA -->
+<div class="modal-overlay" id="cobranca-modal" onclick="if(event.target===this)fecharCobranca()">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">📞 Fila de Cobrança</div>
+      <button class="btn-modal-close" onclick="fecharCobranca()">✕</button>
+    </div>
+    <!-- Info do cliente -->
+    <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700" id="cob-cliente-nome">—</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px" id="cob-cliente-meta">—</div>
+    </div>
+    <!-- Tipo -->
+    <div class="cob-tipo-sel">
+      <button class="cob-tipo-btn active-contato" id="cob-btn-contato"  onclick="setCobrancaTipo('contato')">📝 Registrar Contato</button>
+      <button class="cob-tipo-btn"                id="cob-btn-promessa" onclick="setCobrancaTipo('promessa')">🤝 Registrar Promessa</button>
+    </div>
+    <!-- Form Contato -->
+    <div id="cob-form-contato">
+      <div class="form-group">
+        <label>Observações</label>
+        <textarea id="cob-desc-contato" class="form-control" rows="3" placeholder="Ex: ligou mas não atendeu, enviou WhatsApp, prometeu verificar…"></textarea>
+      </div>
+      <button class="btn" style="width:100%;background:var(--accent);color:#fff;font-weight:700" onclick="confirmarContato()">📝 Registrar Contato</button>
+    </div>
+    <!-- Form Promessa -->
+    <div id="cob-form-promessa" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group" style="margin:0">
+          <label>Data Prometida <span style="color:var(--red)">*</span></label>
+          <input type="date" id="cob-data-prom" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Valor Prometido (R$)</label>
+          <input type="number" id="cob-vlr-prom" class="form-control" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Observações</label>
+        <textarea id="cob-desc-prom" class="form-control" rows="2" placeholder="Ex: confirmou pagamento via boleto no dia 20…"></textarea>
+      </div>
+      <button class="btn" style="width:100%;background:var(--yellow);color:#0c0e16;font-weight:700" onclick="confirmarPromessa()">🤝 Registrar Promessa</button>
+    </div>
+    <!-- Histórico -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Histórico</div>
+      <div id="cob-historico" style="max-height:220px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

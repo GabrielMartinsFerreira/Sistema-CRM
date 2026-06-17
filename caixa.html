@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Projeção de Caixa — GG TECH CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e16;--bg-card:#13151f;--bg-card2:#191c28;--bg-input:#1e2132;
+  --border:#252840;--border-hover:#363a5a;--text:#dde1f0;--text-muted:#5c6080;--text-dim:#8890b0;
+  --accent:#5b6ef5;--accent-glow:rgba(91,110,245,0.18);
+  --green:#22d48f;--green-dim:rgba(34,212,143,0.12);
+  --yellow:#f5c542;--yellow-dim:rgba(245,197,66,0.12);
+  --red:#f0516a;--red-dim:rgba(240,81,106,0.12);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.12);
+  --radius:14px;--radius-sm:8px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px;max-width:1280px;margin:0 auto}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.header-title h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.header-title p{font-size:12px;color:var(--text-dim);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-nav{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-nav-accent{background:linear-gradient(135deg,var(--accent),#7b4ff5);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(91,110,245,0.3)}
+.btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(91,110,245,0.45)}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-overlay p{color:var(--text-dim);font-size:14px}
+
+/* ALERT BANNER */
+#alerta-negativo{display:none;background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;font-size:13px;line-height:1.5}
+#alerta-negativo strong{color:var(--red)}
+
+/* CONFIG PANEL */
+.config-toggle{display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:12px;width:fit-content;transition:all .2s}
+.config-toggle:hover{color:var(--text);border-color:var(--border-hover)}
+.config-toggle .arrow{transition:transform .2s;font-size:10px}
+.config-toggle.open .arrow{transform:rotate(90deg)}
+#config-panel{display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+#config-panel.open{display:block}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:640px){.cfg-grid{grid-template-columns:1fr}}
+.cfg-section-title{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.cfg-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.cfg-field label{font-size:12px;color:var(--text-dim);font-weight:600}
+.cfg-field input{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;width:100%;outline:none;transition:border-color .2s}
+.cfg-field input:focus{border-color:var(--accent)}
+.icr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.icr-item{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.icr-item label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px}
+.icr-item-val{display:flex;align-items:center;gap:6px}
+.icr-item-val input{width:60px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;text-align:right;outline:none}
+.icr-item-val input:focus{border-color:var(--accent)}
+.icr-item-val span{font-size:12px;color:var(--text-muted)}
+.icr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cfg-save-btn{margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.cfg-save-btn:hover{background:#4a5de3;transform:translateY(-1px)}
+.cfg-saldo-hint{font-size:11px;color:var(--text-muted);margin-top:3px}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.kpi-row{grid-template-columns:1fr}}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.kc-receber::before{background:var(--green)}
+.kpi-card.kc-pagar::before{background:var(--orange)}
+.kpi-card.kc-saldo::before{background:var(--blue)}
+.kpi-card.kc-critico::before{background:var(--red)}
+.kpi-icon{font-size:18px;margin-bottom:6px}
+.kpi-label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.5px;line-height:1}
+.kpi-value.positive{color:var(--green)}
+.kpi-value.negative{color:var(--red)}
+.kpi-value.neutral{color:var(--blue)}
+.kpi-value.warn{color:var(--orange)}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+.kpi-sub b{color:var(--text-dim)}
+
+/* CHART CARD */
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.chart-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.chart-topbar h2{font-size:14px;font-weight:700;color:var(--text)}
+.chart-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toggle-btn{padding:6px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:20px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.toggle-btn.active,.toggle-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chart-legend{display:flex;gap:18px;margin-bottom:14px;font-size:11px;color:var(--text-muted);flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-line{width:24px;height:2px;border-radius:2px}
+.leg-line.projected{background:var(--purple)}
+.leg-line.negative{background:var(--red)}
+.leg-line.today{background:rgba(255,255,255,.25);border-top:1px dashed rgba(255,255,255,.25)}
+.chart-wrap{position:relative;height:320px}
+
+/* SECTION TITLES */
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.section-hd h3{font-size:14px;font-weight:700}
+.section-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700}
+.badge-neg{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,81,106,.25)}
+.badge-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,143,.25)}
+
+/* NEG TABLE */
+#neg-section{display:none;background:var(--bg-card);border:1px solid rgba(240,81,106,.25);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px}
+
+/* FLOW TABLE */
+.flow-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{padding:7px 10px;text-align:left;color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.data-table td{padding:8px 10px;border-bottom:1px solid rgba(37,40,64,.5);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr.day-row{cursor:pointer;transition:background .12s}
+.data-table tr.day-row:hover td{background:rgba(255,255,255,.025)}
+.data-table tr.day-row.has-neg td{background:rgba(240,81,106,.04)}
+.data-table tr.detail-row td{padding:4px 10px 4px 24px;background:var(--bg-card2)}
+.data-table tr.detail-row:last-of-type td{padding-bottom:8px}
+.day-toggle-icon{font-size:9px;color:var(--text-muted);margin-right:4px;display:inline-block;width:12px;transition:transform .15s}
+.mono{font-family:'DM Mono',monospace}
+.positive-val{color:var(--green)}
+.negative-val{color:var(--red)}
+.warn-val{color:var(--yellow)}
+.origem-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.ob-cap{background:var(--blue-dim);color:var(--blue)}
+.ob-forn{background:var(--orange-dim);color:var(--orange)}
+.ob-fixo{background:rgba(167,139,250,.1);color:var(--purple)}
+.ob-var{background:var(--yellow-dim);color:var(--yellow)}
+.ob-cartao{background:var(--green-dim);color:var(--green)}
+
+/* ICR indicator in config */
+.icr-bar-wrap{height:4px;background:var(--bg-input);border-radius:2px;margin-top:4px}
+.icr-bar{height:4px;border-radius:2px;transition:width .3s}
+
+/* Empty state */
+.empty-msg{text-align:center;color:var(--text-muted);padding:32px;font-size:13px}
+
+/* Toast */
+.toast-floating{position:fixed;bottom:28px;right:28px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;font-size:13px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:9998;animation:slideUp .2s ease;max-width:320px}
+.toast-floating.ok{border-color:var(--green);color:var(--green)}
+.toast-floating.err{border-color:var(--red);color:var(--red)}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p id="loading-msg">Carregando projeção de caixa…</p>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-title">
+    <h1>💰 Projeção de Caixa</h1>
+    <p>Motor consolidado D+0 → D+60 · Índice de Confiabilidade de Recebimento</p>
+  </div>
+  <div class="header-actions">
+    <a href="index.html" class="btn-nav">← CRM</a>
+    <a href="faturamento.html" class="btn-nav">💵 Faturamento</a>
+    <a href="pedidos.html" class="btn-nav">📦 Pedidos</a>
+    <a href="compras.html" class="btn-nav" style="color:var(--orange);border-color:rgba(251,146,60,.35)">🛒 Compras</a>
+    <a href="relatorios.html" class="btn-nav btn-nav-accent">📈 Relatórios</a>
+  </div>
+</header>
+
+<!-- ALERTA SALDO NEGATIVO -->
+<div id="alerta-negativo">
+  ⚠️ <strong>Saldo projetado negativo detectado:</strong>
+  <span id="alerta-texto">—</span>
+</div>
+
+<!-- CONFIG PANEL -->
+<button class="config-toggle" id="cfg-toggle-btn" onclick="toggleConfig()">
+  <span>⚙️ Configuração do Motor</span>
+  <span class="arrow">▶</span>
+</button>
+<div id="config-panel">
+  <div class="cfg-grid">
+    <div>
+      <div class="cfg-section-title">Ponto de Partida</div>
+      <div class="cfg-field">
+        <label>Saldo Atual em Conta (R$)</label>
+        <input type="number" id="cfg-saldo" step="0.01" min="0" placeholder="0,00">
+        <span class="cfg-saldo-hint">Informe o saldo real na sua conta bancária hoje.</span>
+      </div>
+    </div>
+    <div>
+      <div class="cfg-section-title">Índice de Confiabilidade de Recebimento</div>
+      <div class="icr-grid">
+        <div class="icr-item">
+          <label>🟢 Em dia / a vencer</label>
+          <div class="icr-item-val">
+            <input type="number" id="cfg-w0" min="0" max="100" value="100">
+            <span>%</span>
+          </div>
+          <div class="icr-bar-wrap"><div class="icr-bar" id="bar-w0" style="background:var(--green)"></div></div>
+        </div>
+        <div class="icr-item">
+          <label>🟡 Vencidas 1–30 dias</label>
+          <div class="icr-item-val">
+            <input type="number" id="cfg-w1" min="0" max="100" value="70">
+            <span>%</span>
+          </div>
+          <div class="icr-bar-wrap"><div class="icr-bar" id="bar-w1" style="background:var(--yellow)"></div></div>
+        </div>
+        <div class="icr-item">
+          <label>🟠 Vencidas 31–60 dias</label>
+          <div class="icr-item-val">
+            <input type="number" id="cfg-w2" min="0" max="100" value="40">
+            <span>%</span>
+          </div>
+          <div class="icr-bar-wrap"><div class="icr-bar" id="bar-w2" style="background:var(--orange)"></div></div>
+        </div>
+        <div class="icr-item">
+          <label>🔴 Vencidas + 60 dias</label>
+          <div class="icr-item-val">
+            <input type="number" id="cfg-w3" min="0" max="100" value="0">
+            <span>%</span>
+          </div>
+          <div class="icr-bar-wrap"><div class="icr-bar" id="bar-w3" style="background:var(--red)"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="cfg-save-btn" onclick="salvarConfig()">💾 Salvar e Recalcular</button>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-row">
+  <div class="kpi-card kc-receber">
+    <div class="kpi-icon">📥</div>
+    <div class="kpi-label">A Receber (ponderado)</div>
+    <div class="kpi-value positive" id="k-receber-30">—</div>
+    <div class="kpi-sub">30 dias &nbsp;|&nbsp; <b><span id="k-receber-60">—</span></b> em 60d</div>
+  </div>
+  <div class="kpi-card kc-pagar">
+    <div class="kpi-icon">📤</div>
+    <div class="kpi-label">A Pagar</div>
+    <div class="kpi-value warn" id="k-pagar-30">—</div>
+    <div class="kpi-sub">30 dias &nbsp;|&nbsp; <b><span id="k-pagar-60">—</span></b> em 60d</div>
+  </div>
+  <div class="kpi-card kc-saldo" id="kpi-saldo-card">
+    <div class="kpi-icon">⚖️</div>
+    <div class="kpi-label">Saldo Líquido Projetado</div>
+    <div class="kpi-value neutral" id="k-saldo-30">—</div>
+    <div class="kpi-sub">em 30 dias &nbsp;|&nbsp; <b><span id="k-saldo-60">—</span></b> em 60d</div>
+  </div>
+  <div class="kpi-card kc-critico" id="kpi-critico-card">
+    <div class="kpi-icon">📉</div>
+    <div class="kpi-label">Ponto Crítico</div>
+    <div class="kpi-value" id="k-pior-val">—</div>
+    <div class="kpi-sub" id="k-pior-data">Calculando…</div>
+  </div>
+</div>
+
+<!-- CHART CARD -->
+<div class="chart-card">
+  <div class="chart-topbar">
+    <h2>Saldo Projetado Cumulativo</h2>
+    <div class="chart-controls">
+      <button class="toggle-btn active" id="btn-j30" onclick="setJanela(30)">30 dias</button>
+      <button class="toggle-btn" id="btn-j60" onclick="setJanela(60)">60 dias</button>
+      <button class="toggle-btn" id="btn-reload" onclick="recarregar()" title="Recarregar dados">↺</button>
+    </div>
+  </div>
+  <div class="chart-legend">
+    <span class="leg-item"><span class="leg-line projected"></span> Projetado</span>
+    <span class="leg-item"><span class="leg-line negative"></span> Zona negativa</span>
+    <span class="leg-item"><span class="leg-line today"></span> Hoje</span>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="caixa-chart"></canvas>
+  </div>
+</div>
+
+<!-- TABELA: DIAS NEGATIVOS -->
+<div id="neg-section">
+  <div class="section-hd">
+    <h3>🔴 Dias com Saldo Negativo Projetado</h3>
+    <span class="section-badge badge-neg" id="neg-count-badge">—</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Entradas do Dia</th>
+        <th>Saídas do Dia</th>
+        <th>Saldo Projetado</th>
+      </tr>
+    </thead>
+    <tbody id="neg-tbody"></tbody>
+  </table>
+</div>
+
+<!-- TABELA: PRÓXIMOS 15 DIAS -->
+<div class="flow-section">
+  <div class="section-hd">
+    <h3>📅 Fluxo Detalhado — Próximos 15 Dias</h3>
+    <span class="section-badge badge-ok" id="flow-range-badge">—</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width:32px"></th>
+        <th>Data</th>
+        <th style="text-align:right">Entradas</th>
+        <th style="text-align:right">Saídas</th>
+        <th style="text-align:right">Δ Dia</th>
+        <th style="text-align:right">Saldo Acum.</th>
+      </tr>
+    </thead>
+    <tbody id="flow-tbody"></tbody>
+  </table>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/supabase.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/services/crmService.js"></script>
+<script src="js/services/financeiroService.js"></script>
+<script src="js/services/comprasService.js"></script>
+<script src="js/services/caixaService.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════
+ * caixa.html — Motor de Projeção de Caixa
+ * ════════════════════════════════════════════════════════════════════ */
+
+let _config   = null; // linha de config_caixa
+let _projecao = [];   // array de dias gerado por calcProjecaoDiaria
+let _kpis     = null;
+let _janela   = 30;   // janela de visualização atual (30 ou 60)
+let _chart    = null; // instância Chart.js
+
+/* ─── Inicialização ────────────────────────────────────────────── */
+async function carregar(){
+  setLoading(true,'Carregando configuração…');
+  await authGate();
+
+  // Carrega config (ou usa defaults se não existir)
+  const {data: cfgData} = await caixaService.carregarConfig();
+  _config = cfgData || {
+    saldo_inicial:0, peso_em_dia:100,
+    peso_atraso_1_30:70, peso_atraso_31_60:40, peso_atraso_60plus:0
+  };
+  preencherFormConfig(_config);
+
+  await calcular();
+  setLoading(false);
+}
+
+async function calcular(){
+  setLoading(true,'Carregando fontes de dados…');
+
+  // Carrega todas as fontes em paralelo
+  const [
+    {data: entradasPendentes = []},
+    {data: saidasNativas     = []},
+    {data: boletosPendentes  = []},
+    {data: gastosFixos       = []},
+    {data: variaveisCP       = []},
+  ] = await Promise.all([
+    caixaService.carregarEntradasPendentes(),
+    caixaService.carregarSaidasNativas(),
+    caixaService.carregarBoletosPendentes(),
+    caixaService.carregarGastosFixosPendentes(),
+    caixaService.carregarVariaveisPendentes(),
+  ]);
+
+  setLoading(true,'Calculando projeção…');
+
+  _projecao = caixaService.calcProjecaoDiaria({
+    config: _config,
+    entradasPendentes: entradasPendentes || [],
+    saidasNativas:     saidasNativas     || [],
+    boletosPendentes:  boletosPendentes  || [],
+    gastosFixos:       gastosFixos       || [],
+    variaveisCP:       variaveisCP       || [],
+    janelaDias: 60,
+  });
+
+  _kpis = caixaService.calcKPIs(_projecao);
+
+  renderKPIs();
+  renderChart();
+  renderAlerta();
+  renderTabelaNegativa();
+  renderFlowTable();
+  setLoading(false);
+}
+
+/* ─── Config ───────────────────────────────────────────────────── */
+function toggleConfig(){
+  const panel  = document.getElementById('config-panel');
+  const btn    = document.getElementById('cfg-toggle-btn');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+}
+
+function preencherFormConfig(cfg){
+  const g = id => document.getElementById(id);
+  g('cfg-saldo').value = parseFloat(cfg.saldo_inicial   || 0).toFixed(2);
+  g('cfg-w0').value    = cfg.peso_em_dia        ?? 100;
+  g('cfg-w1').value    = cfg.peso_atraso_1_30   ?? 70;
+  g('cfg-w2').value    = cfg.peso_atraso_31_60  ?? 40;
+  g('cfg-w3').value    = cfg.peso_atraso_60plus ?? 0;
+  atualizarBarrasICR();
+}
+
+function atualizarBarrasICR(){
+  ['w0','w1','w2','w3'].forEach(k=>{
+    const v  = parseFloat(document.getElementById('cfg-'+k).value)||0;
+    const el = document.getElementById('bar-'+k);
+    if(el) el.style.width = Math.max(0,Math.min(100,v))+'%';
+  });
+}
+// Listeners de input para as barras
+['cfg-w0','cfg-w1','cfg-w2','cfg-w3'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input', atualizarBarrasICR);
+});
+
+async function salvarConfig(){
+  const g   = id => document.getElementById(id);
+  const dados = {
+    saldo_inicial:      parseFloat(g('cfg-saldo').value)||0,
+    peso_em_dia:        parseFloat(g('cfg-w0').value)  ??100,
+    peso_atraso_1_30:   parseFloat(g('cfg-w1').value)  ??70,
+    peso_atraso_31_60:  parseFloat(g('cfg-w2').value)  ??40,
+    peso_atraso_60plus: parseFloat(g('cfg-w3').value)  ??0,
+  };
+  const {data, error} = await caixaService.salvarConfig(dados);
+  if(error){ toastMsg('Erro ao salvar config: '+error.message,'err'); return; }
+  _config = data;
+  toastMsg('✅ Configuração salva — recalculando…','ok');
+  await calcular();
+}
+
+/* ─── KPIs ─────────────────────────────────────────────────────── */
+function renderKPIs(){
+  const k    = _kpis;
+  const g    = id => document.getElementById(id);
+  g('k-receber-30').textContent = brl(k.aReceber30);
+  g('k-receber-60').textContent = brl(k.aReceber60);
+  g('k-pagar-30').textContent   = brl(k.aPagar30);
+  g('k-pagar-60').textContent   = brl(k.aPagar60);
+
+  const s30El = g('k-saldo-30');
+  s30El.textContent   = brl(k.saldo30);
+  s30El.className     = 'kpi-value '+(k.saldo30>=0?'positive':'negative');
+  g('k-saldo-60').textContent   = brl(k.saldo60);
+
+  // Ponto crítico
+  const pior = k.piorDia;
+  if(pior){
+    const piorEl = g('k-pior-val');
+    piorEl.textContent = brl(pior.saldoAcumulado);
+    piorEl.className   = 'kpi-value '+(pior.saldoAcumulado<0?'negative':'warn');
+    g('k-pior-data').textContent = 'em '+fmtDiaMes(pior.data)
+      +(pior.saldoAcumulado<0?' ⚠️':'');
+  }
+}
+
+/* ─── Chart.js ─────────────────────────────────────────────────── */
+const todayLinePlugin = {
+  id:'todayLine',
+  afterDraw(chart){
+    const {ctx,chartArea,scales} = chart;
+    if(!chartArea) return;
+    const x = scales.x.getPixelForValue(0);
+    if(x < chartArea.left || x > chartArea.right) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.strokeStyle='rgba(255,255,255,0.18)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([4,3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='10px "DM Sans",sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.textAlign='center';
+    ctx.fillText('Hoje', x, chartArea.top-6);
+    ctx.restore();
+  }
+};
+
+function buildGradient(chart){
+  const {ctx,chartArea,scales} = chart;
+  if(!chartArea) return 'rgba(129,140,248,0.1)';
+  const yScale  = scales.y;
+  const zeroY   = yScale.getPixelForValue(0);
+  const top     = chartArea.top;
+  const bottom  = chartArea.bottom;
+  const height  = bottom - top;
+  if(height <= 0) return 'rgba(129,140,248,0.1)';
+  const ratio = Math.max(0, Math.min(1, (zeroY - top) / height));
+  const grad  = ctx.createLinearGradient(0, top, 0, bottom);
+  if(ratio > 0.005){
+    grad.addColorStop(0,                      'rgba(34,212,143,0.22)');
+    grad.addColorStop(Math.min(ratio,1)-0.001,'rgba(34,212,143,0.03)');
+  }
+  if(ratio < 0.995){
+    grad.addColorStop(Math.max(ratio,0)+0.001,'rgba(240,81,106,0.03)');
+    grad.addColorStop(1,                      'rgba(240,81,106,0.18)');
+  }
+  return grad;
+}
+
+function renderChart(){
+  const dias  = _projecao.filter(d => d.idx <= _janela);
+  const labels= dias.map(d => fmtDiaMes(d.data));
+  const vals  = dias.map(d => d.saldoAcumulado);
+
+  if(_chart){ _chart.destroy(); _chart=null; }
+
+  const canvas = document.getElementById('caixa-chart');
+  const ctx    = canvas.getContext('2d');
+
+  _chart = new Chart(ctx, {
+    type:'line',
+    plugins:[todayLinePlugin],
+    data:{
+      labels,
+      datasets:[{
+        label:'Saldo Projetado',
+        data: vals,
+        borderColor:'rgba(129,140,248,0.9)',
+        borderWidth:2,
+        tension:0.3,
+        pointRadius:0,
+        pointHoverRadius:5,
+        pointHoverBackgroundColor:'#fff',
+        fill:true,
+        backgroundColor(ctx){ return buildGradient(ctx.chart); },
+        segment:{
+          borderColor: ctx =>{
+            const y0=ctx.p0.parsed.y, y1=ctx.p1.parsed.y;
+            return (y0<0||y1<0)?'rgba(240,81,106,0.9)':'rgba(129,140,248,0.9)';
+          }
+        }
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{duration:400},
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e2132',
+          borderColor:'#252840',
+          borderWidth:1,
+          titleColor:'#dde1f0',
+          bodyColor:'#8890b0',
+          padding:10,
+          callbacks:{
+            title: items => fmtDiaMesLong(_projecao[items[0].dataIndex]?.data||''),
+            label: item  => {
+              const d = _projecao[item.dataIndex];
+              const lines = [` Saldo: ${brl(item.parsed.y)}`];
+              if(d?.totalEntradas>0) lines.push(` ↑ Entradas: ${brl(d.totalEntradas)}`);
+              if(d?.totalSaidas>0)   lines.push(` ↓ Saídas: ${brl(d.totalSaidas)}`);
+              return lines;
+            },
+            labelColor: item => ({
+              borderColor:'transparent',
+              backgroundColor: item.parsed.y<0?'#f0516a':'#a78bfa',
+              borderRadius:3
+            })
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(37,40,64,0.6)',drawBorder:false},
+          ticks:{color:'#5c6080',font:{size:10},
+            maxRotation:0,
+            callback(val,idx){
+              // Mostrar label a cada N dias dependendo da janela
+              const step = _janela<=30?2:5;
+              return idx%step===0?this.getLabelForValue(val):'';
+            }
+          }
+        },
+        y:{
+          grid:{color:'rgba(37,40,64,0.6)',drawBorder:false},
+          ticks:{color:'#5c6080',font:{size:10,family:"'DM Mono',monospace"},
+            callback: v => brlCompact(v)
+          }
+        }
+      }
+    }
+  });
+}
+
+function setJanela(n){
+  _janela = n;
+  document.getElementById('btn-j30').classList.toggle('active', n===30);
+  document.getElementById('btn-j60').classList.toggle('active', n===60);
+  renderChart();
+}
+
+/* ─── Alerta de saldo negativo ─────────────────────────────────── */
+function renderAlerta(){
+  const banner = document.getElementById('alerta-negativo');
+  const k      = _kpis;
+  if(k.primeiroNegativo){
+    const d   = k.primeiroNegativo;
+    const cnt = k.diasNegativos.length;
+    document.getElementById('alerta-texto').innerHTML =
+      `primeiro dia negativo em <strong>${fmtDiaMesLong(d.data)}</strong> `+
+      `(saldo projetado: <strong>${brl(d.saldoAcumulado)}</strong>). `+
+      `${cnt} dia${cnt>1?'s':''} crítico${cnt>1?'s':''} na janela de 60 dias.`;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+/* ─── Tabela de dias negativos ─────────────────────────────────── */
+function renderTabelaNegativa(){
+  const section = document.getElementById('neg-section');
+  const k       = _kpis;
+  if(!k.diasNegativos.length){ section.style.display='none'; return; }
+  section.style.display = '';
+  document.getElementById('neg-count-badge').textContent =
+    k.diasNegativos.length+' dia'+(k.diasNegativos.length>1?'s críticos':'');
+  document.getElementById('neg-tbody').innerHTML =
+    k.diasNegativos.map(d=>`
+      <tr>
+        <td>${fmtDiaMesLong(d.data)}</td>
+        <td class="mono positive-val">${d.totalEntradas>0?brl(d.totalEntradas):'—'}</td>
+        <td class="mono negative-val">${d.totalSaidas>0?brl(d.totalSaidas):'—'}</td>
+        <td class="mono negative-val"><strong>${brl(d.saldoAcumulado)}</strong></td>
+      </tr>`).join('');
+}
+
+/* ─── Tabela de fluxo 15 dias ──────────────────────────────────── */
+function renderFlowTable(){
+  const dias15 = _projecao.filter(d => d.idx <= 15);
+  const hoje   = new Date().toISOString().slice(0,10);
+  const tbEl   = document.getElementById('flow-tbody');
+
+  if(!dias15.length){ tbEl.innerHTML='<tr><td colspan="6" class="empty-msg">Sem dados</td></tr>'; return; }
+
+  document.getElementById('flow-range-badge').textContent =
+    fmtDiaMes(dias15[0].data)+' → '+fmtDiaMes(dias15[dias15.length-1].data);
+
+  tbEl.innerHTML = dias15.map((d,i) => {
+    const isNeg   = d.saldoAcumulado < 0;
+    const delta   = d.totalEntradas - d.totalSaidas;
+    const rowCls  = isNeg ? 'day-row has-neg' : 'day-row';
+    const hasItems= d.entradas.length+d.saidas.length > 0;
+    const icon    = hasItems ? '▸' : '';
+
+    let rows = `<tr class="${rowCls}" onclick="${hasItems?'toggleDay('+i+')':''}" id="day-row-${i}">
+      <td><span class="day-toggle-icon" id="day-icon-${i}">${icon}</span></td>
+      <td><strong>${fmtDiaMesLong(d.data)}</strong>${d.isHoje?' <span style="font-size:10px;color:var(--accent)">(hoje)</span>':''}</td>
+      <td class="mono positive-val" style="text-align:right">${d.totalEntradas>0?brl(d.totalEntradas):'—'}</td>
+      <td class="mono ${isNeg?'negative-val':'warn-val'}" style="text-align:right">${d.totalSaidas>0?brl(d.totalSaidas):'—'}</td>
+      <td class="mono ${delta>=0?'positive-val':'negative-val'}" style="text-align:right">${delta!==0?(delta>0?'+':'')+brl(delta):'—'}</td>
+      <td class="mono ${isNeg?'negative-val':'positive-val'}" style="text-align:right"><strong>${brl(d.saldoAcumulado)}</strong></td>
+    </tr>`;
+
+    if(hasItems){
+      rows += `<tr class="detail-row" id="day-detail-${i}" style="display:none">
+        <td colspan="6">
+          <table style="width:100%;font-size:11px;border-collapse:collapse">`;
+      d.entradas.forEach(e=>{
+        rows += `<tr><td style="padding:3px 6px;color:var(--green)">↑</td>
+          <td style="padding:3px 6px">${esc(e.label)}</td>
+          <td style="padding:3px 6px;text-align:right">${origemBadge(e.origem)}</td>
+          <td style="padding:3px 6px;text-align:right;font-family:'DM Mono',monospace;color:var(--green)">${brl(e.valor)}</td>
+          ${e.peso<1?`<td style="padding:3px 6px;color:var(--text-muted);font-size:10px">ICR ${Math.round(e.peso*100)}%</td>`:'<td></td>'}
+        </tr>`;
+      });
+      d.saidas.forEach(s=>{
+        rows += `<tr><td style="padding:3px 6px;color:var(--red)">↓</td>
+          <td style="padding:3px 6px">${esc(s.label)}</td>
+          <td style="padding:3px 6px;text-align:right">${origemBadge(s.origem)}</td>
+          <td style="padding:3px 6px;text-align:right;font-family:'DM Mono',monospace;color:var(--orange)">${brl(s.valor)}</td>
+          <td></td>
+        </tr>`;
+      });
+      rows += `</table></td></tr>`;
+    }
+    return rows;
+  }).join('');
+}
+
+function toggleDay(idx){
+  const detail = document.getElementById('day-detail-'+idx);
+  const icon   = document.getElementById('day-icon-'+idx);
+  if(!detail) return;
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : '';
+  if(icon) icon.textContent = isOpen ? '▸' : '▾';
+}
+
+/* ─── Helpers visuais ──────────────────────────────────────────── */
+const ORIG_LABELS = {cartao:'cartao',cap:'cap',forn:'forn',fixo:'fixo',var:'var'};
+const ORIG_CLS    = {cartao:'ob-cartao',cap:'ob-cap',forn:'ob-forn',fixo:'ob-fixo',var:'ob-var'};
+const ORIG_NAMES  = {cartao:'Cartão',cap:'Conta',forn:'Fornec.',fixo:'Fixo',var:'Variável'};
+
+function origemBadge(o){
+  return `<span class="origem-badge ${ORIG_CLS[o]||'ob-cap'}">${ORIG_NAMES[o]||o}</span>`;
+}
+
+function fmtDiaMes(dateStr){
+  if(!dateStr) return '—';
+  const [,m,d] = dateStr.split('-');
+  const meses  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${d}/${meses[parseInt(m)-1]}`;
+}
+
+function fmtDiaMesLong(dateStr){
+  if(!dateStr) return '—';
+  const d   = new Date(dateStr+'T12:00:00');
+  const sem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  return `${sem[d.getDay()]} ${fmtDiaMes(dateStr)}`;
+}
+
+function brlCompact(v){
+  if(Math.abs(v)>=1000000) return (v/1000000).toFixed(1)+'M';
+  if(Math.abs(v)>=1000)    return (v/1000).toFixed(0)+'k';
+  return brl(v);
+}
+
+function toastMsg(msg, tipo='ok'){
+  const el = document.createElement('div');
+  el.className = 'toast-floating '+tipo;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+async function recarregar(){ await calcular(); }
+
+/* ─── Loading ──────────────────────────────────────────────────── */
+function setLoading(on, msg=''){
+  const ov = document.getElementById('loading-overlay');
+  ov.style.display = on ? 'flex' : 'none';
+  if(msg) document.getElementById('loading-msg').textContent = msg;
+}
+
+/* ─── Boot ─────────────────────────────────────────────────────── */
+carregar();
+</script>
+</body>
+</html>

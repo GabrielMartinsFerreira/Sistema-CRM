@@ -1,6 +1,6 @@
 # 🧠 ARQUIVO DE CONTEXTO DEFINITIVO — GG TECH CRM (Conceito Vidros & Projetos)
 > System Prompt / Context File para uso em futuras conversas com IAs.
-> Última atualização: 2026-06-16 (Módulo Contas a Pagar — refactor completo para Tesouraria Operacional: nova tabela `contas_a_pagar`, máquina 5 estados, modal de baixa com split parcial, calendário, seleção em massa; remoção de Health Dashboard, DRE e Fluxo Semanal do faturamento.html) · Mantido vivo a cada evolução do sistema.
+> Última atualização: 2026-06-17 (**Governança + Caixa + Cobrança**: **P1/P2** Motor de Projeção de Caixa — `caixa.html` + `caixaService.js`; **P3** Auditoria imutável (`audit_log_financeiro`) e Alçadas de aprovação (`alcadas_aprovacao`) com trava 🔐 cobrindo os **4 caminhos de baixa** (CP, boleto fornecedor, gasto fixo/variável e liquidação em massa); **P4** Fila de Cobrança + Promessas de Pagamento — `promessas_pagamento` + `cobrancaService.js`. Correção: **toda baixa atualiza a tabela unificada na hora** — `loadCP`/`loadBoletosCP`/`renderCP` após salvar, sem precisar de F5.) · Mantido vivo a cada evolução do sistema.
 
 ---
 
@@ -31,8 +31,11 @@ js/
 │   └── auth.js         # Supabase Auth: tela de login + window.authGate() + botão Sair
 ├── services/
 │   ├── crmService.js          # TODAS as queries de leads/clientes/storage
-│   ├── financeiroService.js   # dados de pedidos/faturamento/gastos + MATEMÁTICA PURA (DRE, breakeven, fluxo, resumo)
-│   └── comprasService.js      # fornecedores por OS + boletos + view relatorio_despesas_os
+│   ├── financeiroService.js   # dados de pedidos/faturamento/gastos + MATEMÁTICA PURA (DRE, breakeven, fluxo, resumo) + CP + métodos de pagamento dinâmicos
+│   ├── comprasService.js      # fornecedores por OS + boletos + view relatorio_despesas_os
+│   ├── caixaService.js        # P1/P2 — projeção de fluxo de caixa (entradas×ICR − saídas) + config_caixa
+│   ├── auditService.js        # P3 — leitura do audit_log_financeiro + gestão de alcadas_aprovacao (limites de baixa)
+│   └── cobrancaService.js     # P4 — promessas_pagamento (contatos + promessas por lead/OS)
 └── modules/
     ├── wizard-aprovacao.js    # UI de visita + cadastro técnico + wizard de aprovação (3 passos)
     └── ficha-pdf.js           # Ficha de Pedido PDF 3 páginas (html2canvas + jsPDF) — só no faturamento
@@ -42,7 +45,8 @@ js/
 **Regra de ouro:** scripts clássicos compartilham escopo global; nunca redeclarar `db`/`const` do core dentro do inline (causa SyntaxError). Nenhuma chamada `db.from`/`createClient` deve existir nos HTML — tudo passa pelos serviços.
 
 ### 2.3 Banco de dados (Supabase)
-- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, `financeiro_movimentacoes`, **`compras_fornecedores_os`** (fornecedores vinculados à OS, FK→leads CASCADE), **`boletos_fornecedores`** (boletos por fornecedor, status Pendente/Pago/Atrasado, FK→compras CASCADE).
+- **Tabelas:** `leads`, `faturamento`, `crm_clientes`, `gastos_fixos`, `crm_gastos_variaveis`, `financeiro_movimentacoes`, **`compras_fornecedores_os`** (fornecedores vinculados à OS, FK→leads CASCADE), **`boletos_fornecedores`** (boletos por fornecedor, status Pendente/Pago/Atrasado, FK→compras CASCADE), **`contas_a_pagar`** (tesouraria — ver §2.6), **`crm_metodos_pagamento`** (formas de pagamento dinâmicas).
+- **Tabelas de Governança & Operação (2026-06):** **`config_caixa`** (saldo inicial + parâmetros do motor de projeção — P1/P2, ver §2.8), **`audit_log_financeiro`** (trilha **imutável append-only** de INSERT/UPDATE/DELETE em CP e boletos, gravada **só por triggers Postgres** — P3, ver §2.9), **`alcadas_aprovacao`** (limites de aprovação por contexto `baixa_cap`/`baixa_forn` — P3), **`promessas_pagamento`** (contatos e promessas de pagamento por lead — P4, ver §2.10). Todas com **RLS `user_id = auth.uid()`**; o audit log **não tem policy de UPDATE/DELETE** (imutável). Migrations: `2026-06-16_config_caixa.sql`, `2026-06-16_auditoria.sql`, `2026-06-17_promessas_pagamento.sql`.
 - **View `relatorio_despesas_os`** (com `security_invoker = true` — respeita RLS): agrega por OS qtd fornecedores, total lançado/pago/pendente/atrasado, lucro bruto e margem %. Função `atualizar_boletos_atrasados()` marca vencidos.
 - **Campos da Ficha PDF em `leads`:** `endereco_numero`, `cidade`, `estado`, `ficha_descritivo` (JSONB {item,vidro,estrutura,outros}), `ficha_foto1_path`, `ficha_foto2_path` (paths no bucket privado).
 - **Storage:** bucket **PRIVADO** `relatorios-tecnicos` (relatórios contêm PII → LGPD). A coluna `leads.relatorio_tecnico_url` guarda o **caminho**, não a URL; a leitura usa `createSignedUrl(path, 3600)` (URL temporária de 1h).
@@ -63,11 +67,12 @@ js/
 ### 2.4 Arquivos / Telas
 - **`index.html`** — Pipeline/funil de vendas (kanban em tabela com drag-and-drop), Calendário de Visitas Técnicas (toggle Pipeline/Calendário sempre visível; ficha da visita com **WhatsApp + Google Maps + Waze** `https://www.waze.com/ul?q=...&navigate=yes`), Central de Clientes Recorrentes (CRUD + busca `.ilike` + autocomplete por CPF/CNPJ), Wizard de Aprovação de pedido (3 passos: cadastro → pagamento/parcelas → relatório técnico). **Passo 1 inclui:** Desconto % (N2 — calcula valor final com `Math.round`, salva `desconto_pct` e `valor` arredondado), Técnico Responsável (N3 — obrigatório, salva `tecnico_responsavel`), Mídia/Origem (N4 — opcional, salva `midia_origem`).
 - **Responsividade:** os 3 HTML têm bloco `@media(max-width:640px)` (+400px) — body padding reduzido, abas/tabelas roláveis na horizontal, grids/forms em 1 coluna, modais 96vw, ficha de visita empilha botões. Mobile e desktop no mesmo arquivo (sem app separado).
-- **`faturamento.html`** — Núcleo financeiro com **4 abas**: **📊 Visão Obras**, **🏢 Gastos Fixos**, **📉 Gastos Variáveis** e **📋 Contas a Pagar** (Tesouraria Operacional — veja §2.6). *(DRE Comparativa, Health Dashboard e Gráfico de Fluxo Semanal foram migrados para tela gerencial futura — removidos em 2026-06-16.)*
+- **`faturamento.html`** — Núcleo financeiro com **4 abas**: **📊 Visão Obras**, **🏢 Gastos Fixos**, **📉 Gastos Variáveis** e **📋 Contas a Pagar** (Tesouraria Operacional — veja §2.6). No cabeçalho há também os botões **📈 Caixa** (abre `caixa.html` — §2.8) e **📋 Governança** (modal de Auditoria + Alçadas — §2.9). *(DRE Comparativa, Health Dashboard e Gráfico de Fluxo Semanal foram migrados para tela gerencial futura — removidos em 2026-06-16.)*
   - **Recorrência por série (`serie_id`):** gasto fixo com "Replicar" gera a série do mês atual até dezembro (mesma `serie_id`); continua no virar do ano (`garantirSeriesDoAno`). **Editar/Excluir** abre diálogo de escopo: *Apenas este mês / Este e os próximos / Todos* (operações em massa **preservam meses já PAGOS**).
   - **Baixa (fixos e variáveis):** status Pendente/Agendado/Pago (Atrasado derivado). Marcar "Pago" abre modal `gf-pay-modal` capturando **Data de Pagamento Real + Conta/Forma + Comprovante**. Upload de imagem/PDF vai p/ bucket privado `relatorios-tecnicos` prefixo `comprovantes/`; URL aberta via `abrirAnexoTecnico()` (signed URL).
   - **Ficha OS → 📄 Gerar PDF** *(2026-06-12 — substituiu o window.print e os toggles de impressão)*: botão único abre o **modal pré-PDF** (`ficha-pdf-modal`) que confere/completa dados (contato, mídia, consultor, técnico, nº/cidade/UF, datas, descritivo técnico, 2 fotos) — **salva tudo no lead** e chama `gerarFichaPDF(pedido)` (`js/modules/ficha-pdf.js`). PDF de **3 páginas A4 landscape**: OS (cliente+pagamentos+instalação), Termo de Garantia, Relatório Técnico (descritivo+fotos+painel lateral rotacionado). Fotos: bucket privado → signed URL → base64. Logo opcional em `assets/icon-conceito.png` (oculta-se se ausente).
   - **🛒 Custos Reais (Compras)** *(2026-06-12)*: boletos de fornecedores (`relatorio_despesas_os.total_despesas_lancadas`) entram **automaticamente** como dedução em: KPIs, tabela de obras (lucro/margem), Ficha OS (linha própria), Auditoria, Health Dashboard (`calcResumoMes` param `comprasMap`) e DRE (`calcDRE` param `comprasMap`). Mapa `_comprasMap[os_id]` carregado no `Promise.all` do `carregar()`.
+- **`caixa.html`** *(nova, 2026-06-16 — P1/P2)* — **Motor de Projeção de Fluxo de Caixa** (§2.8): a partir do **saldo inicial** (`config_caixa`) projeta o caixa futuro somando recebíveis ponderados pelo **ICR** (Índice de Confiabilidade de Recebimento, por aging) e subtraindo as obrigações de Contas a Pagar. Gráfico de linha (Chart.js) + tabela de fluxo dia a dia. Alimentado por `caixaService.js`. Acessível pelo botão 📈 Caixa no `faturamento.html`.
 - **`pedidos.html`** *(nova, 2026-06-08; evoluída 2026-06-15)* — **Controle de Pedidos e Fluxo Financeiro**: lista todos os pedidos (`leads` com `status='Pedido'`), ordenados por **maior valor por padrão**; filtros de busca, status OS e vendedor; botões de sort (valor, data, cliente, recebido). **4 abas de visão:** Ver Todos, Visão Anual, Visão Mensal e **💰 Contas a Receber** (Aging List — ver §2.7). Três ações por linha:
   - **✏️ Visualizar/Editar:** modal com tabs "Ver" (todos dados, parcelas com `valor_reais`, saldo, observações, relatório técnico) e "Editar" (todos os campos + **editor completo de parcelas** com dual-mode % / R$, barra de progresso em tempo real, add/remove linhas). **Nº da OS é editável** *(2026-06-12)* — corrige duplicidade, cancelamento/renovação e erros de digitação sem excluir o pedido; ao salvar, alerta com `confirm()` se outra OS igual já existir (case-insensitive) e o toast mostra `OS alterada: antiga → nova`. Código do Orçamento permanece readonly. Botões: **🗑 Excluir Pedido** e **🗑 Remover Relatório**. `salvarEdicao()` persiste parcelas normalizadas no JSONB `leads.parcelas`.
   - **🔄 OS:** modal de controle com 4 cards de status (`Em andamento` / `Aguardando` / `Congelada` → motivo obrigatório / `Concluída`). Salva em `leads.status_os` e `leads.motivo_congelamento`.
@@ -290,6 +295,87 @@ Nova aba `vtab-cobranca` → `#view-cobranca`. Usa dados já carregados (`_pedid
 - **Filtros:** busca livre, status, data início, data fim de vencimento
 - **KPIs:** Total a Receber, Saldo Vencido (R$), Clientes Parciais (qtd), Clientes em Dia (qtd)
 - **Ação:** botão 💰 Caixa abre o fluxo de caixa do pedido para registrar recebimento
+
+### 2.8 Motor de Projeção de Caixa — `caixa.html` *(P1/P2, 2026-06-16)*
+
+Projeção diária do saldo **D+0 → D+60** a partir do saldo inicial, ponderando recebíveis pelo risco de não-liquidação. **Migration:** `2026-06-16_config_caixa.sql` (rodar **depois** de `contas_a_pagar.sql` — reutiliza `trg_set_updated_at()`). Serviço: `caixaService.js`.
+
+#### Tabela `config_caixa` (1 linha por usuário — `user_id` UNIQUE)
+| Coluna | Default | Descrição |
+|---|---|---|
+| `saldo_inicial` | 0 | Ponto de partida da projeção |
+| `peso_em_dia` | 100 | ICR — em dia / a vencer |
+| `peso_atraso_1_30` | 70 | ICR — atraso 1–30 dias |
+| `peso_atraso_31_60` | 40 | ICR — atraso 31–60 dias |
+| `peso_atraso_60plus` | 0 | ICR — atraso > 60 dias |
+
+**RLS:** SELECT/INSERT/UPDATE `TO authenticated` com `user_id = auth.uid()`.
+
+#### ICR — Índice de Confiabilidade de Recebimento
+`calcPeso(dataVenc, hoje, config)` retorna 0..1 conforme o aging da parcela. **Só entradas são ponderadas** — saídas entram pelo valor cheio (custo é custo). Parcelas vencidas são puxadas para **D+0** (hoje).
+
+#### 5 fontes agregadas em `calcProjecaoDiaria()`
+| Fonte | Direção | Tabela / filtro |
+|---|---|---|
+| Parcelas de cartão pendentes | Entrada (×ICR) | `financeiro_movimentacoes` (is_parcela_cartao, status Pendente) |
+| Contas a pagar nativas | Saída | `contas_a_pagar` (status ≠ pago) — usa saldo `valor_original − valor_pago` |
+| Boletos de fornecedores | Saída | `boletos_fornecedores` (status ≠ Pago) |
+| Gastos fixos | Saída | `gastos_fixos` (próx. 3 meses, ≠ Pago) |
+| Gastos variáveis | Saída | `crm_gastos_variaveis` (próx. 3 meses, ≠ Pago) |
+
+#### KPIs — `calcKPIs(dias)`
+A Receber / A Pagar em 30 e 60 dias, Saldo projetado em D+30 e D+60, **dias com saldo negativo** (`diasNegativos`), **primeiro dia negativo** (alerta de ruptura de caixa) e **pior dia** (menor saldo). Gráfico de linha (Chart.js) + tabela dia a dia.
+
+**Métodos em `caixaService`:** `carregarConfig`, `salvarConfig` (upsert por `user_id`), `carregarEntradasPendentes`, `carregarSaidasNativas`, `carregarBoletosPendentes`, `carregarGastosFixosPendentes`, `carregarVariaveisPendentes`, `calcPeso`, `calcProjecaoDiaria`, `calcKPIs`.
+
+### 2.9 Governança Financeira — Auditoria + Alçadas *(P3, 2026-06-16/17)*
+
+Botão **📋 Governança** no cabeçalho do `faturamento.html` → modal `#gov-modal` com 2 abas. **Migration:** `2026-06-16_auditoria.sql` (rodar **depois** de `contas_a_pagar.sql`). Serviço: `auditService.js`.
+
+#### Auditoria — `audit_log_financeiro` (imutável / append-only)
+- Colunas: `tabela`, `operacao` (INSERT/UPDATE/DELETE), `registro_id`, `dados_antes` JSONB, `dados_depois` JSONB, `campos_alterados` TEXT[], `created_at`.
+- **Gravado exclusivamente por trigger** `fn_audit_financeiro()` (`auth.uid()` da sessão). Triggers: `AFTER INSERT/UPDATE/DELETE` em `contas_a_pagar` + `AFTER UPDATE` em `boletos_fornecedores`. `campos_alterados` calculado comparando `to_jsonb(OLD)` × `to_jsonb(NEW)` via `jsonb_each`.
+- **RLS:** só SELECT + INSERT (`user_id = auth.uid()`). **Sem policy de UPDATE/DELETE → o log é imutável pelo app.** A aba "Log de Operações" mostra os 50 mais recentes (`auditService.formatarLog`).
+
+#### Alçadas — `alcadas_aprovacao` + trava 🔐
+- Colunas: `contexto` (`baixa_cap` | `baixa_forn`), `valor_limite`, `ativo`. UNIQUE `(user_id, contexto)`. Upsert via `auditService.salvarAlcada` (`onConflict: 'user_id,contexto'`).
+- Aba "Alçadas" configura limite + Ativo por contexto (`renderAlcadasForm` / `salvarAlcadas`). `mudarTabGov('alcadas')` recarrega do banco antes de renderizar.
+- Ao confirmar uma baixa **acima do limite ativo**, dispara o overlay `#alcada-overlay` (🔐, z-index **1100**, acima dos modais 1000) exigindo 2ª confirmação. Máquina de estado: `_alcadaBypass` (pula a checagem na re-entrada) + `_alcadaCallback` (função a re-executar após confirmar).
+- **A trava cobre os 4 caminhos de baixa** (corrigido 2026-06-17):
+
+| Caminho | Função | Contexto | Refresh pós-baixa |
+|---|---|---|---|
+| Conta a Pagar | `confirmarCapBaixa` | `baixa_cap` | `loadCP` + `renderCP` |
+| Boleto Fornecedor | `_confirmarFornBaixa` | `baixa_forn` | `loadBoletosCP` + `renderCP` |
+| Gasto Fixo / Variável | `confirmarPagamento` | `baixa_cap` | `renderCP` |
+| Liquidação em massa | `liquidarSelecionados` | `baixa_cap` (maior item do lote) | `renderCP` |
+
+> ⚠️ **`baixa_cap` governa CP + Gasto Fixo + Gasto Variável** (todos "Tesouraria Operacional"); **`baixa_forn`** governa boletos de fornecedor. Rótulo na UI: "Baixa de Conta / Gasto".
+> **`_alcadas` é carregado com `await` no `carregar()`** — evita race condition (a trava não disparava se a baixa ocorresse antes de o fetch resolver).
+> **Toda baixa re-busca do banco e re-renderiza a tabela unificada na hora** (sem F5).
+
+**Métodos em `auditService`:** `carregarLogs`, `carregarAlcadas`, `salvarAlcada`, `getLimite(contexto, alcadas)`, `verificarAlcada`, `formatarLog`.
+
+### 2.10 Fila de Cobrança + Promessas de Pagamento *(P4, 2026-06-17 — estende §2.7)*
+
+Extensão da aba **💰 Contas a Receber** em `pedidos.html`. **Migration:** `2026-06-17_promessas_pagamento.sql`. Serviço: `cobrancaService.js`.
+
+#### Tabela `promessas_pagamento`
+| Coluna | Descrição |
+|---|---|
+| `lead_id` | Pedido/cliente associado |
+| `tipo` | `contato` (registro de comunicação) \| `promessa` (compromisso de pagamento) |
+| `descricao` | Nota livre |
+| `valor_prometido`, `data_prometida` | Só para `tipo='promessa'` |
+| `status` | `pendente` \| `cumprida` \| `quebrada` \| `cancelada` |
+
+**RLS:** SELECT/INSERT/UPDATE `user_id = auth.uid()`. **View `vw_promessas_quebradas`**: `tipo='promessa' AND status='pendente' AND data_prometida < CURRENT_DATE`.
+
+#### UI
+- **Fila Prioritária** (3 cards no topo da aba): **Promessas Quebradas** (vermelho), **Vencem em 3 dias** (amarelo), **Atrasados s/ Contato** (laranja).
+- Cada linha da Aging List ganha **badge de promessa** (ativa / quebrada / contato) e botão **📞 Cobrar** → modal `#cobranca-modal` com abas **📝 Contato** / **🤝 Promessa** + **histórico** por cliente (ações ✓ Cumprida / ✗ Quebrada).
+
+**Métodos em `cobrancaService`:** `carregarTodas`, `registrar`, `marcarStatus`, `getPorLead`, `getUltimoContato`, `getPromessaAtiva`, `isQuebrada`.
 
 ### 3.3 DRE — Demonstração do Resultado do Exercício (comparativa)
 > ⚠️ O modal `#dre-modal` e funções `renderDRE / abrirDREModal / imprimirDRE` foram **removidos de `faturamento.html`** em 2026-06-16. A matemática (`calcDRE`) permanece em `financeiroService.js` para uso futuro em tela gerencial dedicada.
