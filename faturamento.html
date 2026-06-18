@@ -1067,6 +1067,10 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
         <span class="calc-label">( − ) MO Inst. + Comissões</span>
         <span class="calc-value" id="cb-comissoes" style="color:var(--red)"></span>
       </div>
+      <div class="calc-line" id="cb-var-line" style="display:none">
+        <span class="calc-label">( − ) 💳 Custos Variáveis (Taxas/Cartão)</span>
+        <span class="calc-value" id="cb-var" style="color:#e879f9"></span>
+      </div>
       <div class="calc-line">
         <span class="calc-label" style="font-size:11px">Total Deduções</span>
         <span class="calc-value" id="cb-deducoes" style="color:var(--red)"></span>
@@ -1313,6 +1317,13 @@ let _osCardLeadId=null;      // lead em exibição na Ficha OS (usado pelo Gerar
 function fatCustos(f){ return financeiroService.deducoesDetalhadas(f); }
 /* Custos Reais de Compras de uma OS (boletos de fornecedores — qualquer status) */
 function comprasDe(leadId){ return parseFloat(_comprasMap[leadId]||0); }
+/* Custos Variáveis vinculados a uma OS (crm_gastos_variaveis com pedido_id — inclui Taxa de Cartão) */
+function variaveisDe(leadId){
+  if(leadId==null) return 0;
+  return (_variaveisCache||[])
+    .filter(v=>v.pedido_id!=null && String(v.pedido_id)===String(leadId))
+    .reduce((s,v)=>s+parseFloat(v.valor||0),0);
+}
 
 async function carregar(){
   if(!(await authGate())) return;        // bloqueia sem sessão (mostra login)
@@ -1369,9 +1380,9 @@ function calcDed(f){ return financeiroService.calcDeducoes(f); }
 
 function renderKPIs(){
   const brutoTotal=allPedidos.reduce((a,b)=>a+parseFloat(b.valor||0),0);
-  const comCusto=allPedidos.filter(p=>fatMap[p.id]||comprasDe(p.id)>0);
+  const comCusto=allPedidos.filter(p=>fatMap[p.id]||comprasDe(p.id)>0||variaveisDe(p.id)>0);
   const lucros=comCusto.map(p=>{
-    const ded=calcDed(fatMap[p.id])+comprasDe(p.id);
+    const ded=calcDed(fatMap[p.id])+comprasDe(p.id)+variaveisDe(p.id);
     return parseFloat(p.valor||0)-ded;
   });
   const lucroTotal=lucros.reduce((a,b)=>a+b,0);
@@ -1412,9 +1423,10 @@ function renderTabela(){
   const rows=allPedidos.map(p=>{
     const f=fatMap[p.id];
     const compras=comprasDe(p.id);
+    const variaveis=variaveisDe(p.id);
     let lucro=null,margem=null;
-    if(f||compras>0){
-      const ded=calcDed(f)+compras;
+    if(f||compras>0||variaveis>0){
+      const ded=calcDed(f)+compras+variaveis;
       lucro=parseFloat(p.valor||0)-ded;
       const v=parseFloat(p.valor||0);
       margem=v>0?lucro/v*100:0;
@@ -1488,12 +1500,13 @@ function calcularModal(){
   if(!p)return;
   const bruto=parseFloat(p.valor||0);
   const compras=comprasDe(leadId);
+  const variaveis=variaveisDe(leadId);
   const log=num('fm-logistica');
   const enc=num('fm-encargos');
   const maoInst=num('fm-mao-inst');
   const comVend=num('fm-comis-vend');
   const comArq=num('fm-comis-arq');
-  const ded=compras+log+enc+maoInst+comVend+comArq;
+  const ded=compras+variaveis+log+enc+maoInst+comVend+comArq;
   const lucro=bruto-ded;
   const margem=bruto>0?lucro/bruto*100:0;
 
@@ -1501,6 +1514,9 @@ function calcularModal(){
   document.getElementById('cb-mat').textContent=brl(compras);
   document.getElementById('cb-log-enc').textContent=brl(log+enc);
   document.getElementById('cb-comissoes').textContent=brl(maoInst+comVend+comArq);
+  const cbVarLine=document.getElementById('cb-var-line');
+  if(variaveis>0){ document.getElementById('cb-var').textContent=brl(variaveis); if(cbVarLine)cbVarLine.style.display=''; }
+  else if(cbVarLine){ cbVarLine.style.display='none'; }
   document.getElementById('cb-deducoes').textContent=brl(ded);
 
   const lucroEl=document.getElementById('cb-lucro');
@@ -1614,9 +1630,10 @@ function abrirAuditModal(leadId){
   const f=fatMap[leadId];
   const c=fatCustos(f);
   const compras=comprasDe(leadId);
+  const variaveis=variaveisDe(leadId);
   const realMat=compras>0?compras:c.mat;
   const bruto=parseFloat(p.valor||0);
-  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq+compras;
+  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq+compras+variaveis;
   const lucro=bruto-ded;
   const margem=bruto>0?lucro/bruto*100:0;
   const margemCls=margem>=30?'amb-ok':margem>=20?'amb-warn':'amb-danger';
@@ -1632,7 +1649,8 @@ function abrirAuditModal(leadId){
     {label:'MO de Instalação',value:c.maoInst,color:'#a78bfa'},
     {label:'Comissão Vendedor',value:c.comVend,color:'#5b6ef5'},
     {label:'Comissão Arq/Eng',value:c.comArq,color:'#22d48f'},
-    {label:'🛒 Compras / Insumos (Custos Reais)',value:compras,color:'#fb923c'}
+    {label:'🛒 Compras / Insumos (Custos Reais)',value:compras,color:'#fb923c'},
+    {label:'💳 Custos Variáveis da OS (Taxas/Cartão)',value:variaveis,color:'#e879f9'}
   ].filter(d=>d.value>0);
 
   // Dados para o gráfico (somente deduções reais, não previsão)
@@ -1739,8 +1757,9 @@ function abrirOsCard(leadId){
   const f=fatMap[leadId];
   const c=fatCustos(f);
   const compras=comprasDe(leadId);
+  const variaveis=variaveisDe(leadId);
   const bruto=parseFloat(p.valor||0);
-  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq+compras;
+  const ded=c.mat+c.log+c.enc+c.maoInst+c.comVend+c.comArq+compras+variaveis;
   const lucro=bruto-ded;
   const margem=bruto>0?lucro/bruto*100:0;
   const margemCls=margem>=30?'var(--green)':margem>=20?'var(--yellow)':'var(--red)';
@@ -1771,7 +1790,7 @@ function abrirOsCard(leadId){
     </div>`;
   }
 
-  const finBlock=(f||compras>0)?`
+  const finBlock=(f||compras>0||variaveis>0)?`
     <div id="oc-fin-block">
     <div class="oc-section">💰 Resumo Financeiro</div>
     <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px">
@@ -1780,6 +1799,7 @@ function abrirOsCard(leadId){
       ${(c.log+c.enc)>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) Logística + Encargos</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(c.log+c.enc)}</span></div>`:''}
       ${(c.maoInst+c.comVend+c.comArq)>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) MO Inst. + Comissões</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(c.maoInst+c.comVend+c.comArq)}</span></div>`:''}
       ${compras>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) 🛒 Compras / Insumos (Custos Reais)</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(compras)}</span></div>`:''}
+      ${variaveis>0?`<div class="oc-fin-line"><span style="color:var(--text-muted)">( − ) 💳 Custos Variáveis (Taxas/Cartão)</span><span style="font-family:'DM Mono',monospace;color:var(--red)">${brl(variaveis)}</span></div>`:''}
       <div class="oc-fin-line" style="padding:8px 0;border-top:2px solid var(--border);margin-top:4px">
         <span style="font-weight:700;font-size:14px">Lucro Líquido Real</span>
         <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;color:${lucro>=0?'var(--green)':'var(--red)'}">${brl(lucro)}</span>
@@ -2665,7 +2685,7 @@ async function adicionarVariavel(){
   }catch(e){ toast('Erro ao salvar gasto variável: '+e.message,'err'); return; }
   ['gv-desc','gv-valor','gv-dia','gv-cat','gv-pedido'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   toast('✅ Gasto variável lançado!');
-  renderVariaveis();
+  renderPorMes(); // atualiza Visão Obras: variável vinculada a OS entra no custo da obra
 }
 
 async function removerVariavel(id){
@@ -2675,7 +2695,7 @@ async function removerVariavel(id){
     if(error)throw error;
     _variaveisCache=_variaveisCache.filter(v=>String(v.id)!==String(id));
   }catch(e){ toast('Erro ao remover: '+e.message,'err'); return; }
-  renderVariaveis();
+  renderPorMes(); // atualiza Visão Obras: remoção de variável de OS sai do custo da obra
 }
 
 /* Status efetivo da variável (Pago/Atrasado/Agendado/Pendente) */

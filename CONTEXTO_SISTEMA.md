@@ -406,7 +406,8 @@ Extensão da aba **💰 Contas a Receber** em `pedidos.html`. **Migration:** `20
 - **Card “Índice de Variabilidade”:** métrica destacada calculada em tempo real:
   - `Índice = (Total de Gastos Variáveis do Mês / Faturamento Bruto do Mês) × 100`
   - Exibe total em `brl()` e o percentual sutil (ex.: **“15.5% s/ Faturamento”**).
-- **Integração financeira:** os Gastos Variáveis entram em **“Custos de Obras (Variáveis)”** no Health Dashboard, na DRE (Custos Diretos de Obras) e no **Breakeven** (`relatorios.html`) — garantindo consistência entre todas as telas.
+- **Integração financeira:** os Gastos Variáveis entram em **”Custos de Obras (Variáveis)”** no Health Dashboard, na DRE (Custos Diretos de Obras) e no **Breakeven** (`relatorios.html`) — garantindo consistência entre todas as telas.
+- **Custo por OS (2026-06-17):** variáveis com `pedido_id` preenchido (incl. a **Taxa de Cartão** injetada automaticamente em `confirmarCartaoModal`) também entram no **custo da obra** em `faturamento.html` via helper **`variaveisDe(leadId)`** — somadas em KPIs (lucro/margem), Visão Obras, Modal de Custos, Auditoria (🔍) e Ficha OS. Antes só deduções + boletos contavam por OS; a taxa de cartão ficava de fora do lucro por obra. Variáveis “🌐 Geral” (`pedido_id=null`) não são atribuídas a nenhuma OS.
 
 ---
 
