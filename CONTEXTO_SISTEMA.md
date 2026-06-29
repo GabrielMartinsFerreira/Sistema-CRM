@@ -52,6 +52,7 @@ js/
 - **Storage:** bucket **PRIVADO** `relatorios-tecnicos` (relatórios contêm PII → LGPD). A coluna `leads.relatorio_tecnico_url` guarda o **caminho**, não a URL; a leitura usa `createSignedUrl(path, 3600)` (URL temporária de 1h).
 - **Migração histórica:** `localStorage` foi 100% removido → tudo persiste no Supabase. Parcelas do wizard ficam em `leads.parcelas` (JSONB).
 - **Campos em `leads`:** `status_os` (TEXT, default 'Em andamento'), `motivo_congelamento` (TEXT), `visita_relatorio_path` (TEXT), `observacoes` (TEXT), `desconto_pct` (NUMERIC 5,2, default 0), `tecnico_responsavel` (TEXT), `midia_origem` (TEXT).
+- **`crm_clientes` — campo adicionado (2026-06-29):** `responsavel_financeiro_nome` (TEXT, opcional). Capturado somente para Pessoa Física (CPF). Usado em emissão de contratos, NF e réguas de cobrança secundárias quando o pagador da obra difere do titular do CPF. Migração: `2026-06-29_responsavel_financeiro.sql`. UI: campo no modal "Cadastro Técnico" (`#cad-responsavel-financeiro`) e no Wizard de Aprovação Step 1 (`#aprov-responsavel-financeiro`). Edit mode hidrata automaticamente em `_preencherCadModal()` e `selecionarClienteRecorrente()`.
 
 ### 2.3.1 🔐 SEGURANÇA (RLS + Auth — validado por pentest)
 - **Login obrigatório (Supabase Auth, e-mail/senha).** `js/core/auth.js` faz o gate: cada loader de página chama `await authGate()` antes de buscar dados. Sem sessão → mostra tela de login e **não carrega nada**.

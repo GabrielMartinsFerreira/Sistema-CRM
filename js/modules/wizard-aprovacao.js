@@ -33,7 +33,8 @@ function _rowToCliente(r){
     cpf: r.cpf || '', cnpj: r.cnpj || '', razao_social: r.razao_social || '',
     nome_contato: r.nome_contato || '', telefone: r.telefone || '',
     cep: r.cep || '', endereco: r.endereco || '', bairro: r.bairro || '',
-    complemento: r.complemento || '', periodo: r.periodo || '', prazo: r.prazo || ''
+    complemento: r.complemento || '', periodo: r.periodo || '', prazo: r.prazo || '',
+    responsavel_financeiro_nome: r.responsavel_financeiro_nome || ''
   };
 }
 /* Mapeia objeto JS → linha do banco (snake_case) para INSERT/UPDATE */
@@ -45,7 +46,8 @@ function _clienteToRow(c){
     cpf: c.cpf || '', cnpj: c.cnpj || '', razao_social: c.razao_social || '',
     nome_contato: c.nome_contato || '', telefone: c.telefone || '',
     cep: c.cep || '', endereco: c.endereco || '', bairro: c.bairro || '',
-    complemento: c.complemento || '', periodo: c.periodo || '', prazo: c.prazo || ''
+    complemento: c.complemento || '', periodo: c.periodo || '', prazo: c.prazo || '',
+    responsavel_financeiro_nome: c.responsavel_financeiro_nome || null
   };
 }
 
@@ -244,10 +246,12 @@ function _preencherCadModal(c){
   if((c.tipo || 'CPF') === 'CPF'){
     document.getElementById('cad-nome-completo').value = c.nome || '';
     document.getElementById('cad-cpf').value           = c.cpf  || c.doc || '';
+    document.getElementById('cad-responsavel-financeiro').value = c.responsavel_financeiro_nome || '';
   } else {
     document.getElementById('cad-razao-social').value  = c.razao_social || c.nome || '';
     document.getElementById('cad-cnpj').value          = c.cnpj || c.doc || '';
     document.getElementById('cad-nome-contato').value  = c.nome_contato || '';
+    document.getElementById('cad-responsavel-financeiro').value = '';
   }
   document.getElementById('cad-telefone').value    = c.telefone    || '';
   document.getElementById('cad-cep').value         = c.cep         || '';
@@ -384,6 +388,9 @@ async function salvarCadastroTecnico(){
     cnpj:         tipo === 'CNPJ' ? doc : '',
     razao_social: tipo === 'CNPJ' ? nome : '',
     nome_contato: tipo === 'CNPJ' ? document.getElementById('cad-nome-contato').value.trim() : '',
+    responsavel_financeiro_nome: tipo === 'CPF'
+      ? (document.getElementById('cad-responsavel-financeiro')?.value.trim() || '')
+      : '',
     telefone:     document.getElementById('cad-telefone').value.trim(),
     cep:          document.getElementById('cad-cep').value.trim(),
     endereco:     document.getElementById('cad-endereco').value.trim(),
@@ -822,10 +829,12 @@ function selecionarClienteRecorrente(id){
   if(c.tipo === 'CPF'){
     document.getElementById('aprov-nome-completo').value = c.nome || '';
     document.getElementById('aprov-cpf').value           = c.cpf  || c.doc || '';
+    document.getElementById('aprov-responsavel-financeiro').value = c.responsavel_financeiro_nome || '';
   } else {
     document.getElementById('aprov-razao-social').value  = c.razao_social || c.nome || '';
     document.getElementById('aprov-cnpj').value          = c.cnpj || c.doc || '';
     document.getElementById('aprov-nome-contato').value  = c.nome_contato || '';
+    document.getElementById('aprov-responsavel-financeiro').value = '';
   }
   document.getElementById('aprov-telefone').value    = c.telefone    || '';
   document.getElementById('aprov-cep').value         = c.cep         || '';
@@ -854,6 +863,9 @@ async function salvarClienteRecorrente(leadId){
     cnpj:         docType === 'CNPJ' ? doc  : '',
     razao_social: docType === 'CNPJ' ? nome : '',
     nome_contato: docType === 'CNPJ' ? document.getElementById('aprov-nome-contato').value.trim() : '',
+    responsavel_financeiro_nome: docType === 'CPF'
+      ? (document.getElementById('aprov-responsavel-financeiro')?.value.trim() || '')
+      : '',
     telefone:     document.getElementById('aprov-telefone').value.trim(),
     cep:          document.getElementById('aprov-cep').value.trim(),
     endereco:     document.getElementById('aprov-endereco').value.trim(),
@@ -880,6 +892,7 @@ function _aprvReset(){
   ['ar-codigo','ar-nome','ar-valor','ar-status'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = ''; });
   document.getElementById('aprovar-os').value = '';
   ['aprov-nome-completo','aprov-cpf','aprov-razao-social','aprov-cnpj','aprov-nome-contato',
+   'aprov-responsavel-financeiro',
    'aprov-telefone','aprov-cep','aprov-endereco','aprov-bairro','aprov-complemento',
    'aprov-prazo','aprov-prev-inst']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });

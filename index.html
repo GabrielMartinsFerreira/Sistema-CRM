@@ -624,6 +624,10 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
         <div class="wiz-doc-feedback" id="cpf-feedback" style="display:none"></div>
       </div>
     </div>
+    <div class="form-group">
+      <label>Responsável Financeiro / Legal <span style="font-size:11px;color:var(--text-muted);font-weight:400">(opcional — preencha quando o pagador difere do titular do CPF)</span></label>
+      <input type="text" id="aprov-responsavel-financeiro" class="form-control" placeholder="Nome do responsável pelo pagamento">
+    </div>
   </div>
   <div id="doc-cnpj-fields" style="display:none">
     <div class="form-row">
@@ -1236,6 +1240,10 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
             <input type="text" id="cad-cpf" class="form-control" placeholder="000.000.000-00" maxlength="14" oninput="fmtCadCPFInput(this)">
             <div id="cad-cpf-feedback" class="wiz-doc-feedback" style="display:none"></div>
           </div>
+        </div>
+        <div class="form-group">
+          <label>Responsável Financeiro / Legal <span style="font-size:11px;color:var(--text-muted);font-weight:400">(opcional — preencha quando o pagador difere do titular do CPF)</span></label>
+          <input type="text" id="cad-responsavel-financeiro" class="form-control" placeholder="Nome do responsável pelo pagamento">
         </div>
       </div>
       <div id="cad-cnpj-fields" style="display:none">
