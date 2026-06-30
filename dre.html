@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>DRE — GG TECH CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e16;--bg-card:#13151f;--bg-card2:#191c28;--bg-input:#1e2132;
+  --border:#252840;--border-hover:#363a5a;--text:#dde1f0;--text-muted:#5c6080;--text-dim:#8890b0;
+  --accent:#5b6ef5;--accent-glow:rgba(91,110,245,0.18);
+  --green:#22d48f;--green-dim:rgba(34,212,143,0.12);
+  --yellow:#f5c542;--yellow-dim:rgba(245,197,66,0.12);
+  --red:#f0516a;--red-dim:rgba(240,81,106,0.12);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.12);
+  --radius:14px;--radius-sm:8px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+a{color:inherit;text-decoration:none}
+
+/* OVERLAY */
+#overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.logo-wrap{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--green-dim);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(34,212,143,0.35)}
+.logo-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.logo-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-nav{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-nav-accent{background:linear-gradient(135deg,var(--accent),#7b4ff5);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(91,110,245,0.3)}
+.btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(91,110,245,0.45)}
+
+/* CARD / SECTION */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-hint{font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);opacity:.7}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s}
+.kpi-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px 0 0 2px}
+.kc-bruto::before{background:var(--accent)}
+.kc-imposto::before{background:var(--red)}
+.kc-margem::before{background:var(--yellow)}
+.kc-lucro::before{background:var(--green)}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.kpi-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-0.8px}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* TOOLBAR */
+.toolbar-dre{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px}
+.toolbar-group{display:flex;flex-direction:column;gap:5px}
+.toolbar-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.form-control{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;outline:none;transition:border-color .15s}
+.form-control:focus{border-color:var(--accent)}
+select.form-control{padding-right:28px;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235c6080' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* DRE TABLE */
+.dre-table-wrap{overflow-x:auto;border-radius:var(--radius-sm);-webkit-overflow-scrolling:touch}
+.dre-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px}
+.dre-table thead th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 10px;text-align:right;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg-card2)}
+.dre-table thead th:first-child{text-align:left;min-width:196px;background:var(--bg-card2)}
+.dre-table thead th.mes-col{cursor:pointer;transition:all .2s;user-select:none}
+.dre-table thead th.mes-col:hover{background:var(--accent-glow);color:var(--accent)}
+.dre-table thead th.mes-col.ativo{background:var(--accent-glow);color:var(--accent);border-bottom-color:var(--accent)}
+.dre-table thead th.col-total{color:var(--text);font-weight:700;border-left:2px solid var(--border)}
+.dre-table tbody td{padding:10px 10px;text-align:right;border-bottom:1px solid rgba(37,40,64,.45);font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap}
+.dre-table tbody td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;white-space:nowrap;padding-left:14px;background:var(--bg-card)}
+.dre-table tbody td.col-total{border-left:2px solid var(--border);font-weight:700;background:var(--bg-card2)!important}
+.dre-table tbody tr:hover td{background:var(--bg-card2)}
+.dre-table tbody tr:hover td:first-child{background:var(--bg-card2)}
+.row-subtot td{background:rgba(30,33,50,.6)!important;border-top:1px solid var(--border);border-bottom:2px solid var(--border)!important}
+.row-subtot td:first-child{background:rgba(30,33,50,.6)!important}
+.row-lucro td{background:rgba(34,212,143,.04)!important;border-top:2px solid var(--border);border-bottom:0!important}
+.row-lucro td:first-child{background:rgba(34,212,143,.04)!important}
+.val-zero{color:var(--text-muted)!important;font-weight:400!important}
+.row-label-wrap{display:flex;align-items:center;gap:7px}
+.row-dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* DRILL-DOWN PAINEL */
+.mes-panel-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.mes-panel-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:9px}
+.mes-panel-title::before{content:'';display:block;width:3px;height:18px;background:var(--accent);border-radius:2px}
+.btn-fechar-mes{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;padding:5px 12px;border-radius:var(--radius-sm);transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-fechar-mes:hover{border-color:var(--red);color:var(--red)}
+.kpi-inner{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+.kpi-inner .kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.kpi-inner .kpi-value{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.5px}
+.kpi-inner .kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* TABELAS DO DRILL-DOWN */
+.dt-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt-table th{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.dt-table th:not(:first-child){text-align:right}
+.dt-table td{padding:10px 10px;border-bottom:1px solid rgba(37,40,64,.5);vertical-align:middle;white-space:nowrap;font-size:12.5px}
+.dt-table td:not(:first-child){text-align:right;font-family:'DM Mono',monospace;font-size:12px}
+.dt-table tr:last-child td{border-bottom:none}
+.dt-table tr:hover td{background:var(--bg-card2)}
+.dt-table tfoot tr td{border-top:2px solid var(--border);border-bottom:none;font-weight:700;font-size:13px;background:var(--bg-card2)!important;font-family:'DM Mono',monospace;text-align:right}
+.dt-table tfoot tr td:first-child{text-align:left;font-family:'DM Sans',sans-serif}
+.os-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-glow);border:1px solid rgba(91,110,245,.3);border-radius:4px;padding:1px 6px;margin-right:5px;font-family:'DM Mono',monospace;letter-spacing:.3px}
+.empty-msg{text-align:center;color:var(--text-muted);padding:32px;font-size:14px}
+
+/* RESPONSIVO */
+@media(max-width:900px){
+  body{padding:16px}
+  .dre-table-wrap{-webkit-overflow-scrolling:touch}
+  .dre-table{min-width:960px}
+  .kpi-row{grid-template-columns:1fr 1fr}
+}
+/* ─── SIDEBAR NAVIGATION ─── */
+:root{--sb-w:220px;--sb-w-col:56px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:250}
+.sb-overlay.open{display:block}
+.sb{position:fixed;left:0;top:0;height:100%;width:var(--sb-w);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:300;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.sb-top{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sb-top::-webkit-scrollbar{display:none}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 14px 14px;border-bottom:1px solid var(--border);text-decoration:none;white-space:nowrap}
+.sb-logo-icon{font-size:20px;flex-shrink:0;width:24px;text-align:center}
+.sb-logo-text{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.4px;transition:opacity .15s,max-width .22s;overflow:hidden;max-width:180px}
+.sb-group{padding:10px 0 2px}
+.sb-group-label{font-size:9px;font-weight:800;letter-spacing:1.3px;color:var(--text-muted);text-transform:uppercase;padding:0 16px 6px;white-space:nowrap;transition:opacity .15s;overflow:hidden}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:var(--radius-sm);color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s;position:relative}
+.sb-link:hover{background:var(--bg-card2);color:var(--text)}
+.sb-link.active{background:rgba(91,110,245,.14);color:var(--accent);font-weight:700}
+.sb-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;line-height:1}
+.sb-lbl{overflow:hidden;transition:opacity .15s,max-width .22s;max-width:150px}
+.sb-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;line-height:16px}
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.sb-user-email{font-size:10px;color:var(--text-muted);padding:2px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.sb-signout-btn{width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;overflow:hidden}
+.sb-signout-btn:hover{background:var(--red-dim,rgba(240,81,106,.12));color:var(--red);border-color:rgba(240,81,106,.35)}
+.sb.collapsed{width:var(--sb-w-col)}
+.sb.collapsed .sb-logo{padding:18px 10px 14px;justify-content:center}
+.sb.collapsed .sb-logo-text,.sb.collapsed .sb-group-label,.sb.collapsed .sb-lbl,.sb.collapsed .sb-user-email{opacity:0;max-width:0}
+.sb.collapsed .sb-link{padding:9px 6px;margin:1px 6px;justify-content:center}
+.sb.collapsed .sb-badge{right:4px;top:4px;transform:none;font-size:9px;min-width:14px}
+.sb.collapsed .sb-footer{padding:8px 6px;text-align:center}
+.sb.collapsed .sb-signout-btn{gap:0;font-size:14px;padding:7px 4px;border:none}
+.sb-main{margin-left:var(--sb-w);transition:margin-left .22s cubic-bezier(.4,0,.2,1)}
+body.sb-collapsed .sb-main{margin-left:var(--sb-w-col)}
+.user-bar{display:none!important}
+.sb-hamburger{display:none;position:fixed;top:12px;z-index:400;width:34px;height:34px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;left:calc(var(--sb-w-col) + 8px);transition:left .22s cubic-bezier(.4,0,.2,1)}
+.sb.mobile-open~.sb-hamburger{left:calc(var(--sb-w) + 8px)}
+@media(max-width:768px){.sb-hamburger{display:flex}.sb{width:var(--sb-w-col)}.sb.mobile-open{width:var(--sb-w)}.sb-main{margin-left:var(--sb-w-col)}}
+</style>
+</head>
+<body>
+<div class="sb-overlay" id="sb-overlay"></div>
+<nav class="sb" id="sb">
+  <div class="sb-top">
+    <a class="sb-logo" href="home.html"><span class="sb-logo-icon">⚙️</span><span class="sb-logo-text">GG&nbsp;TECH</span></a>
+    <div class="sb-group">
+      <div class="sb-group-label">COMERCIAL</div>
+      <a href="home.html"    class="sb-link"><span class="sb-icon">🏠</span><span class="sb-lbl">Home</span></a>
+      <a href="index.html"   class="sb-link"><span class="sb-icon">📋</span><span class="sb-lbl">Pipeline</span></a>
+      <a href="pedidos.html" class="sb-link"><span class="sb-icon">📦</span><span class="sb-lbl">Pedidos</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">FINANCEIRO</div>
+      <a href="faturamento.html" class="sb-link"><span class="sb-icon">💰</span><span class="sb-lbl">Faturamento</span><span class="sb-badge" id="sb-badge-fat" style="display:none">0</span></a>
+      <a href="caixa.html"       class="sb-link"><span class="sb-icon">📈</span><span class="sb-lbl">Caixa</span><span class="sb-badge" id="sb-badge-caixa" style="display:none">0</span></a>
+      <a href="relatorios.html"  class="sb-link"><span class="sb-icon">📊</span><span class="sb-lbl">Relatórios</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">COMPRAS</div>
+      <a href="compras.html" class="sb-link"><span class="sb-icon">🛒</span><span class="sb-lbl">Compras</span></a>
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user-email" id="sb-user-email">—</div>
+    <button class="sb-signout-btn" onclick="db.auth.signOut().then(()=>location.reload())">⏻ Sair</button>
+  </div>
+</nav>
+<button class="sb-hamburger" id="sb-hamburger" onclick="window._sbToggle&&window._sbToggle()" aria-label="Menu">☰</button>
+<script>
+(function(){
+  var p=location.pathname.split('/').pop()||'home.html';
+  document.querySelectorAll('.sb-link').forEach(function(el){if(el.getAttribute('href')===p)el.classList.add('active');});
+  function _tryEmail(){var s=window._authSession;if(s&&s.user&&s.user.email){var el=document.getElementById('sb-user-email');if(el)el.textContent=s.user.email;return true;}return false;}
+  if(!_tryEmail()){var _eObs=new MutationObserver(function(){if(_tryEmail())_eObs.disconnect();});_eObs.observe(document.body,{childList:true});}
+  setTimeout(function(){var src=document.getElementById('alerta-caixa');if(src){var _bObs=new MutationObserver(function(){var b=document.getElementById('sb-badge-caixa');if(!b)return;var show=src.style.display!=='none'&&src.textContent;if(show){b.textContent=src.textContent;b.style.display='';}else b.style.display='none';});_bObs.observe(src,{childList:true,attributes:true,attributeFilter:['style']});}},500);
+  window._sbToggle=function(){var sb=document.getElementById('sb');var ovl=document.getElementById('sb-overlay');if(window.innerWidth<768){sb.classList.toggle('mobile-open');if(ovl)ovl.classList.toggle('open');}else{sb.classList.toggle('collapsed');document.body.classList.toggle('sb-collapsed');}};
+  window.setSidebarBadge=function(id,n){var el=document.getElementById('sb-badge-'+id);if(!el)return;if(n>0){el.style.display='';el.textContent=n;}else el.style.display='none';};
+  document.getElementById('sb-overlay').addEventListener('click',function(){window._sbToggle&&window._sbToggle();});
+})();
+</script>
+<div class="sb-main">
+
+<div id="overlay"><div class="spinner"></div></div>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-title">DRE</div>
+      <div class="logo-sub">Demonstração do Resultado do Exercício — Mensal &amp; Anual</div>
+    </div>
+  </div>
+</header>
+
+<!-- TOOLBAR -->
+<div class="card toolbar-dre">
+  <div class="toolbar-group">
+    <label class="toolbar-label">Exercício</label>
+    <select id="sel-ano" class="form-control" style="min-width:100px" onchange="onAnoChange()"></select>
+  </div>
+  <div class="toolbar-group">
+    <label class="toolbar-label">Alíquota de Impostos (%)</label>
+    <input type="number" id="inp-aliq" class="form-control" style="width:148px" min="0" max="100" step="0.01" value="0" oninput="onAliqChange()" placeholder="0,00">
+  </div>
+  <div style="margin-left:auto;align-self:center">
+    <span style="font-size:12px;color:var(--text-muted)">Regime de competência · Clique em um mês para detalhar</span>
+  </div>
+</div>
+
+<!-- KPIs ANUAIS -->
+<div class="kpi-row" id="dreKpisAnuais"></div>
+
+<!-- DRE ANUAL -->
+<div class="card">
+  <div class="section-title">
+    DRE ANUAL —
+    <span id="dre-ano-label" style="color:var(--text);text-transform:none;letter-spacing:0;font-size:14px;font-family:'DM Mono',monospace;font-weight:700"></span>
+    <span class="section-hint">· clique no mês para detalhar</span>
+  </div>
+  <div class="dre-table-wrap">
+    <div id="dreTableWrap">
+      <div class="empty-msg">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- DRILL-DOWN MENSAL -->
+<div id="dreMensalPanel" style="display:none">
+
+  <!-- Header + KPIs do mês -->
+  <div class="card">
+    <div class="mes-panel-hd">
+      <div class="mes-panel-title" id="dreMesTitle">—</div>
+      <button class="btn-fechar-mes" onclick="fecharMensal()">✕ Fechar detalhamento</button>
+    </div>
+    <div class="kpi-row" id="dreKpisMes" style="margin-bottom:0"></div>
+  </div>
+
+  <!-- Obras / OS do mês -->
+  <div class="card">
+    <div class="section-title">🏗 Obras do Mês</div>
+    <div id="dreOsWrap"></div>
+  </div>
+
+  <!-- Gastos variáveis -->
+  <div class="card" id="dreVarCard">
+    <div class="section-title">⚡ Gastos Variáveis do Mês</div>
+    <div id="dreVarWrap"></div>
+  </div>
+
+  <!-- Gastos fixos -->
+  <div class="card" id="dreFixosCard">
+    <div class="section-title">📋 Gastos Fixos do Mês</div>
+    <div id="dreFixosWrap"></div>
+  </div>
+
+</div><!-- /dreMensalPanel -->
+
+<script src="js/core/utils.js"></script>
+<script src="js/core/supabase.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/services/crmService.js"></script>
+<script src="js/services/financeiroService.js"></script>
+<script src="js/services/comprasService.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+ * dre.html — DRE Mensal & Anual
+ * Usa calcDRE() e calcResumoMes() de financeiroService.js
+ * ══════════════════════════════════════════════════════════════ */
+
+/* ── Estado ─────────────────────────────────────────────────── */
+let _pedidos    = [];   // leads (status='Pedido')
+let _fatMap     = {};   // lead_id → faturamento row
+let _gastos     = [];   // gastos_fixos
+let _variaveis  = [];   // crm_gastos_variaveis
+let _comprasMap = {};   // os_id → total boletos de fornecedores
+let _anoSel     = new Date().getFullYear();
+let _aliq       = 0;    // alíquota de impostos (%)
+let _mesSel     = null; // índice 0-11 do mês selecionado no drill-down
+
+const MESES      = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+/* ── Helpers de formatação ──────────────────────────────────── */
+function brlR(v){ return brl(Math.round(v)); }
+
+function celBrl(v, color){
+  const r = Math.round(v);
+  if(r === 0) return '<span class="val-zero">—</span>';
+  const neg = r < 0;
+  return `<span style="color:${color}">${neg ? '–' : ''}${brl(Math.abs(r))}</span>`;
+}
+
+function celSigned(v, bold){
+  const r = Math.round(v);
+  if(r === 0) return '<span class="val-zero">—</span>';
+  const color = r > 0 ? 'var(--green)' : 'var(--red)';
+  const fw    = bold ? 'font-weight:700;' : '';
+  return `<span style="color:${color};${fw}">${r < 0 ? '–' : ''}${brl(Math.abs(r))}</span>`;
+}
+
+function pctStr(num, den){ return den > 0 ? (num / den * 100).toFixed(1) + '%' : '—'; }
+
+/* ── Anos disponíveis ───────────────────────────────────────── */
+function anosDisponiveis(){
+  const s = new Set([new Date().getFullYear()]);
+  _pedidos.forEach(p => { const a = parseInt((p.data_aprovacao || '').split('-')[0]); if(a > 2000) s.add(a); });
+  _gastos.forEach(g  => { if(g.ano  > 2000) s.add(g.ano);  });
+  _variaveis.forEach(v => { if(v.ano > 2000) s.add(v.ano); });
+  return [...s].sort((a, b) => b - a);
+}
+
+function popularSelAno(){
+  const sel  = document.getElementById('sel-ano');
+  const anos = anosDisponiveis();
+  sel.innerHTML = anos.map(a => `<option value="${a}"${a === _anoSel ? ' selected' : ''}>${a}</option>`).join('');
+}
+
+/* ── Handlers de toolbar ────────────────────────────────────── */
+function onAnoChange(){
+  _anoSel  = parseInt(document.getElementById('sel-ano').value);
+  _mesSel  = null;
+  document.getElementById('dreMensalPanel').style.display = 'none';
+  renderDRE();
+}
+
+function onAliqChange(){
+  _aliq = parseFloat(document.getElementById('inp-aliq').value) || 0;
+  renderDRE();
+  if(_mesSel !== null) renderMensal(_mesSel);
+}
+
+/* ── Definição das linhas do DRE ────────────────────────────── */
+const DRE_ROWS = [
+  { key:'bruto',   label:'Faturamento Bruto',       dot:'var(--accent)', color:'var(--accent)', signed:false, bold:false, sub:false      },
+  { key:'impostos',label:'(–) Impostos',             dot:'var(--red)',    color:'var(--red)',    signed:false, bold:false, sub:false      },
+  { key:'fatLiq',  label:'Faturamento Líquido',     dot:'var(--accent)', color:'var(--accent)', signed:false, bold:true,  sub:true       },
+  { key:'custos',  label:'(–) Custos Diretos',       dot:'var(--orange)',color:'var(--orange)', signed:false, bold:false, sub:false      },
+  { key:'margem',  label:'Margem de Contribuição',  dot:'var(--yellow)',color:null,            signed:true,  bold:true,  sub:true       },
+  { key:'fixos',   label:'(–) Gastos Fixos',         dot:'var(--yellow)',color:'var(--yellow)', signed:false, bold:false, sub:false      },
+  { key:'lucro',   label:'Lucro Líquido',            dot:'var(--green)', color:null,            signed:true,  bold:true,  sub:true, big:true },
+];
+
+/* ── Render KPIs anuais ─────────────────────────────────────── */
+function renderKpisAnuais(dre){
+  const bruto    = Math.round(dre.acc.bruto);
+  const impostos = Math.round(dre.acc.impostos);
+  const margem   = Math.round(dre.acc.margem);
+  const lucro    = Math.round(dre.acc.lucro);
+  const qtdOS    = _pedidos.filter(p => parseInt((p.data_aprovacao || '').split('-')[0]) === _anoSel).length;
+
+  const lucroColor  = lucro  >= 0 ? 'var(--green)'  : 'var(--red)';
+  const margemColor = margem >= 0 ? 'var(--yellow)'  : 'var(--red)';
+
+  document.getElementById('dreKpisAnuais').innerHTML = `
+    <div class="kpi-card kc-bruto">
+      <div class="kpi-label">Faturamento Bruto</div>
+      <div class="kpi-value" style="color:var(--accent)">${brlR(bruto)}</div>
+      <div class="kpi-sub">${qtdOS} obra${qtdOS !== 1 ? 's' : ''} no ano</div>
+    </div>
+    <div class="kpi-card kc-imposto">
+      <div class="kpi-label">Impostos (${_aliq.toFixed(2).replace('.',',')}%)</div>
+      <div class="kpi-value" style="color:var(--red)">${impostos > 0 ? '–' : ''}${brlR(Math.abs(impostos))}</div>
+      <div class="kpi-sub">Alíquota aplicada sobre o bruto</div>
+    </div>
+    <div class="kpi-card kc-margem">
+      <div class="kpi-label">Margem de Contribuição</div>
+      <div class="kpi-value" style="color:${margemColor}">${margem < 0 ? '–' : ''}${brlR(Math.abs(margem))}</div>
+      <div class="kpi-sub">${pctStr(margem, bruto)} do faturamento</div>
+    </div>
+    <div class="kpi-card kc-lucro">
+      <div class="kpi-label">Lucro Líquido</div>
+      <div class="kpi-value" style="color:${lucroColor}">${lucro < 0 ? '–' : ''}${brlR(Math.abs(lucro))}</div>
+      <div class="kpi-sub">${pctStr(lucro, bruto)} de margem líquida</div>
+    </div>`;
+}
+
+/* ── Render tabela DRE anual ────────────────────────────────── */
+function renderDRE(){
+  const dre = financeiroService.calcDRE(
+    _pedidos, _fatMap, _gastos, _anoSel, _aliq, _variaveis, _comprasMap
+  );
+
+  renderKpisAnuais(dre);
+  document.getElementById('dre-ano-label').textContent = _anoSel;
+
+  /* cabeçalho dos meses */
+  const thMeses = MESES.map((m, i) =>
+    `<th class="mes-col${_mesSel === i ? ' ativo' : ''}" onclick="drillDown(${i})" title="Detalhar ${MESES_FULL[i]}">${m}</th>`
+  ).join('');
+
+  /* linhas */
+  let tbody = '';
+  for(const row of DRE_ROWS){
+    const trCls = row.big ? 'row-lucro' : (row.sub ? 'row-subtot' : '');
+
+    /* célula do label */
+    const dotEl = `<span class="row-dot" style="background:${row.dot}${row.bold ? '' : ';opacity:.65'}"></span>`;
+    const labelEl = row.bold
+      ? `<strong class="row-label-wrap">${dotEl}${esc(row.label)}</strong>`
+      : `<span class="row-label-wrap" style="color:var(--text-dim)">${dotEl}${esc(row.label)}</span>`;
+
+    /* células dos meses */
+    const tdsMeses = Array.from({length:12}, (_, i) => {
+      const v = dre[row.key][i];
+      return `<td>${row.signed ? celSigned(v, row.bold) : celBrl(v, row.color)}</td>`;
+    }).join('');
+
+    /* célula total */
+    const totalV = dre.acc[row.key];
+    const totalCell = row.signed
+      ? `<td class="col-total">${celSigned(totalV, true)}</td>`
+      : `<td class="col-total">${celBrl(totalV, row.color)}</td>`;
+
+    tbody += `<tr class="${trCls}"><td>${labelEl}</td>${tdsMeses}${totalCell}</tr>`;
+  }
+
+  document.getElementById('dreTableWrap').innerHTML = `
+    <table class="dre-table">
+      <thead>
+        <tr>
+          <th></th>
+          ${thMeses}
+          <th class="col-total">Total</th>
+        </tr>
+      </thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+}
+
+/* ── Drill-down mensal ──────────────────────────────────────── */
+function drillDown(mes){
+  _mesSel = mes;
+  /* marca o mês ativo no cabeçalho */
+  document.querySelectorAll('.dre-table .mes-col').forEach((th, i) =>
+    th.classList.toggle('ativo', i === mes)
+  );
+  renderMensal(mes);
+  document.getElementById('dreMensalPanel').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('dreMensalPanel').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
+function fecharMensal(){
+  _mesSel = null;
+  document.getElementById('dreMensalPanel').style.display = 'none';
+  document.querySelectorAll('.dre-table .mes-col').forEach(th => th.classList.remove('ativo'));
+}
+
+/* ── Render detalhamento mensal ─────────────────────────────── */
+function renderMensal(mes){
+  document.getElementById('dreMesTitle').textContent = `${MESES_FULL[mes]} ${_anoSel}`;
+
+  /* resumo via calcResumoMes */
+  const rm = financeiroService.calcResumoMes(
+    _pedidos, _fatMap, _gastos, mes, _anoSel, _variaveis, _comprasMap
+  );
+  const impostoMes = Math.round(rm.receita * _aliq / 100);
+  const lucroMes   = Math.round(rm.receita) - impostoMes - Math.round(rm.custosObras) - Math.round(rm.fixos);
+  const lucroColor = lucroMes >= 0 ? 'var(--green)' : 'var(--red)';
+
+  /* KPIs do mês */
+  document.getElementById('dreKpisMes').innerHTML = `
+    <div class="kpi-inner">
+      <div class="kpi-label">Faturamento Bruto</div>
+      <div class="kpi-value" style="color:var(--accent)">${brlR(rm.receita)}</div>
+      <div class="kpi-sub">Impostos: ${brlR(impostoMes)}</div>
+    </div>
+    <div class="kpi-inner">
+      <div class="kpi-label">Custos Diretos</div>
+      <div class="kpi-value" style="color:var(--orange)">${brlR(rm.custosObras)}</div>
+      <div class="kpi-sub">OS: ${brlR(rm.deducoesOS)} · Compras: ${brlR(rm.comprasMes)} · Var: ${brlR(rm.variaveisMes)}</div>
+    </div>
+    <div class="kpi-inner">
+      <div class="kpi-label">Gastos Fixos</div>
+      <div class="kpi-value" style="color:var(--yellow)">${brlR(rm.fixos)}</div>
+      <div class="kpi-sub">Pagos: ${brlR(rm.fixosPagos)} · Pendente: ${brlR(rm.fixosPendentes)}</div>
+    </div>
+    <div class="kpi-inner">
+      <div class="kpi-label">Lucro Líquido</div>
+      <div class="kpi-value" style="color:${lucroColor}">${lucroMes < 0 ? '–' : ''}${brlR(Math.abs(lucroMes))}</div>
+      <div class="kpi-sub">Margem contribuição: ${brlR(rm.margem)} (${pctStr(rm.margem, rm.receita)})</div>
+    </div>`;
+
+  /* Obras do mês */
+  const leadsDoMes = _pedidos.filter(p => {
+    const pts = (p.data_aprovacao || '').split('-');
+    return parseInt(pts[0]) === _anoSel && parseInt(pts[1]) - 1 === mes;
+  });
+
+  if(leadsDoMes.length === 0){
+    document.getElementById('dreOsWrap').innerHTML = '<div class="empty-msg">Nenhuma obra aprovada neste mês</div>';
+  } else {
+    let osRows = '';
+    let totBruto = 0, totDir = 0, totComp = 0, totMarg = 0;
+
+    for(const p of leadsDoMes){
+      const bruto   = parseFloat(p.valor || 0);
+      const custDir = Math.round(financeiroService.calcDeducoes(_fatMap[p.id]));
+      const comp    = Math.round(parseFloat(_comprasMap[p.id] || 0));
+      const marg    = Math.round(bruto) - custDir - comp;
+      totBruto += Math.round(bruto);
+      totDir   += custDir;
+      totComp  += comp;
+      totMarg  += marg;
+
+      const mCol = `<span style="color:${marg >= 0 ? 'var(--green)' : 'var(--red)'}">${marg < 0 ? '–' : ''}${brl(Math.abs(marg))}</span>`;
+      const mPct = bruto > 0 ? `<span style="font-size:10px;color:var(--text-muted);margin-left:5px">${(marg/bruto*100).toFixed(1)}%</span>` : '';
+
+      osRows += `<tr>
+        <td><span class="os-badge">#${esc(String(p.id))}</span>${esc(p.codigo_orcamento || '—')}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(p.nome || '—')}</td>
+        <td style="color:var(--text-dim);max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(p.produto || '—')}</td>
+        <td style="color:var(--accent)">${brlR(bruto)}</td>
+        <td style="color:var(--orange)">${custDir > 0 ? brl(custDir) : '<span class="val-zero">—</span>'}</td>
+        <td style="color:var(--orange)">${comp > 0 ? brl(comp) : '<span class="val-zero">—</span>'}</td>
+        <td>${mCol}${mPct}</td>
+      </tr>`;
+    }
+
+    const totMargCol = `<span style="color:${totMarg >= 0 ? 'var(--green)' : 'var(--red)'}">${totMarg < 0 ? '–' : ''}${brl(Math.abs(totMarg))}</span>`;
+
+    document.getElementById('dreOsWrap').innerHTML = `
+      <table class="dt-table">
+        <thead><tr>
+          <th>OS / Código</th>
+          <th>Cliente</th>
+          <th>Produto</th>
+          <th style="text-align:right">Fat. Bruto</th>
+          <th style="text-align:right">Custos Dir.</th>
+          <th style="text-align:right">Compras</th>
+          <th style="text-align:right">Margem</th>
+        </tr></thead>
+        <tbody>${osRows}</tbody>
+        <tfoot><tr>
+          <td colspan="3">Total (${leadsDoMes.length} obra${leadsDoMes.length !== 1 ? 's' : ''})</td>
+          <td>${brl(totBruto)}</td>
+          <td style="color:var(--orange)">${totDir > 0 ? brl(totDir) : '—'}</td>
+          <td style="color:var(--orange)">${totComp > 0 ? brl(totComp) : '—'}</td>
+          <td>${totMargCol}</td>
+        </tr></tfoot>
+      </table>`;
+  }
+
+  /* Gastos variáveis do mês */
+  const varsMes = (_variaveis || []).filter(v => v.mes === mes && v.ano === _anoSel);
+  if(varsMes.length === 0){
+    document.getElementById('dreVarCard').style.display = 'none';
+  } else {
+    document.getElementById('dreVarCard').style.display = 'block';
+    let varRows = '';
+    let varTotal = 0;
+
+    for(const v of varsMes){
+      const val = parseFloat(v.valor || 0);
+      varTotal += val;
+      const vincTag = v.pedido_id
+        ? `<span class="os-badge">#${esc(String(v.pedido_id))}</span>`
+        : `<span style="font-size:10px;color:var(--text-muted)">Geral</span>`;
+      const stColor = (v.status || 'Pendente') === 'Pago' ? 'var(--green)' : 'var(--text-muted)';
+      varRows += `<tr>
+        <td>${esc(v.categoria || '—')}</td>
+        <td>${esc(v.descricao || '—')}</td>
+        <td>${vincTag}</td>
+        <td><span style="font-size:11px;font-weight:700;color:${stColor}">${esc(v.status || 'Pendente')}</span></td>
+        <td style="color:var(--orange)">${brlR(val)}</td>
+      </tr>`;
+    }
+
+    document.getElementById('dreVarWrap').innerHTML = `
+      <table class="dt-table">
+        <thead><tr>
+          <th>Categoria</th>
+          <th>Descrição</th>
+          <th>Vínculo OS</th>
+          <th>Status</th>
+          <th style="text-align:right">Valor</th>
+        </tr></thead>
+        <tbody>${varRows}</tbody>
+        <tfoot><tr>
+          <td colspan="4">Total variáveis</td>
+          <td style="color:var(--orange)">${brlR(varTotal)}</td>
+        </tr></tfoot>
+      </table>`;
+  }
+
+  /* Gastos fixos do mês */
+  const gastosMes = (_gastos || []).filter(g => g.mes === mes && g.ano === _anoSel);
+  if(gastosMes.length === 0){
+    document.getElementById('dreFixosCard').style.display = 'none';
+  } else {
+    document.getElementById('dreFixosCard').style.display = 'block';
+    let fixRows = '';
+    let fixTotal = 0;
+
+    for(const g of gastosMes){
+      const val  = parseFloat(g.valor || 0);
+      fixTotal  += val;
+      const pago = financeiroService.ehPago(g);
+      const stColor = pago ? 'var(--green)' : 'var(--yellow)';
+      fixRows += `<tr>
+        <td style="font-weight:500">${esc(g.nome || '—')}</td>
+        <td style="color:var(--text-dim)">${esc(g.categoria || '—')}</td>
+        <td><span style="font-size:11px;font-weight:700;color:${stColor}">${pago ? 'Pago' : 'Pendente'}</span></td>
+        <td style="color:var(--yellow)">${brlR(val)}</td>
+      </tr>`;
+    }
+
+    document.getElementById('dreFixosWrap').innerHTML = `
+      <table class="dt-table">
+        <thead><tr>
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Status</th>
+          <th style="text-align:right">Valor</th>
+        </tr></thead>
+        <tbody>${fixRows}</tbody>
+        <tfoot><tr>
+          <td colspan="3">Total fixos</td>
+          <td style="color:var(--yellow)">${brlR(fixTotal)}</td>
+        </tr></tfoot>
+      </table>`;
+  }
+}
+
+/* ── Carregamento de dados ──────────────────────────────────── */
+async function carregar(){
+  if(!(await authGateRole(['gestor','financeiro']))) return;
+  try{
+    const [
+      {data:pedidos,   error:e1},
+      {data:fat,       error:e2},
+      {data:gastos,    error:e3},
+      {data:variaveis, error:e4},
+      {data:compras,   error:e5}
+    ] = await Promise.all([
+      financeiroService.carregarPedidos(),
+      financeiroService.carregarFaturamento(),
+      financeiroService.carregarGastos(),
+      financeiroService.carregarVariaveis(),
+      comprasService.carregarRelatorio()
+    ]);
+
+    if(e1) throw e1;
+    if(e2) throw e2;
+    if(e3) throw e3;
+    if(e4) throw e4;
+
+    _pedidos   = pedidos || [];
+    _fatMap    = {};
+    (fat || []).forEach(f => { _fatMap[f.lead_id] = f; });
+    _gastos    = gastos || [];
+    _variaveis = (variaveis || []).map(v => ({...v, valor:parseFloat(v.valor||0)}));
+    _comprasMap = {};
+    if(e5){ console.warn('[DRE] relatorio_despesas_os indisponível:', e5.message); }
+    else  { (compras || []).forEach(r => { _comprasMap[r.os_id] = parseFloat(r.total_despesas_lancadas || 0); }); }
+
+    popularSelAno();
+    renderDRE();
+  }catch(e){
+    toast('Erro ao carregar dados: ' + e.message, 'err');
+    console.error('[DRE]', e);
+    document.getElementById('dreTableWrap').innerHTML = `<div class="empty-msg">Erro: ${esc(e.message)}</div>`;
+  }finally{
+    const ov = document.getElementById('overlay');
+    ov.style.opacity = '0';
+    setTimeout(() => ov.style.display = 'none', 400);
+  }
+}
+
+carregar();
+</script>
+</div>
+</body>
+</html>

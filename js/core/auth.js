@@ -19,12 +19,36 @@ async function authGate(){
   try{
     const { data:{ session } } = await db.auth.getSession();
     _authSession = session;
-    if(session){ _renderUserBar(session); return true; }
+    if(session){
+      window._userRole = (session.user?.user_metadata?.role) || 'gestor';
+      _renderUserBar(session); return true;
+    }
   }catch(e){ console.warn('auth getSession:', e.message); }
   _renderLogin();
   return false;
 }
 window.authGate = authGate;
+
+/* ── Papel padrão antes de authGate() ser chamado ── */
+window._userRole    = 'gestor';
+window.isGestor     = () => window._userRole === 'gestor';
+window.isVendedor   = () => window._userRole === 'vendedor';
+window.isFinanceiro = () => window._userRole === 'financeiro';
+window.isTecnico    = () => window._userRole === 'tecnico';
+
+/* authGateRole(roles) — verifica autenticação E papel.
+ * Se o usuário não tem um dos papéis permitidos, redireciona para home.html.
+ * Uso: if(!(await authGateRole(['gestor','financeiro']))) return; */
+async function authGateRole(roles){
+  if(!(await authGate())) return false;
+  if(!roles.includes(window._userRole)){
+    if(typeof toast === 'function') toast('Acesso restrito para seu perfil.', 'err');
+    setTimeout(()=>{ location.href = 'home.html'; }, 700);
+    return false;
+  }
+  return true;
+}
+window.authGateRole = authGateRole;
 
 function _setAuthMsg(m){ const el=document.getElementById('auth-msg'); if(el) el.textContent=m||''; }
 
@@ -88,11 +112,23 @@ function _renderLogin(){
 
 function _renderUserBar(session){
   if(document.getElementById('auth-userbar')) return;
+
+  /* Injetar CSS que oculta .gestor-only para quem não for gestor */
+  if(!document.getElementById('roles-style')){
+    const s=document.createElement('style');
+    s.id='roles-style';
+    s.textContent='body:not([data-role="gestor"]) .gestor-only{display:none!important}';
+    document.head.appendChild(s);
+  }
+  document.body.dataset.role = window._userRole || 'gestor';
+
   const email=(session && session.user && session.user.email) || 'usuário';
+  const ROLE_LABELS={gestor:'Gestor 👑',vendedor:'Vendedor',financeiro:'Financeiro',tecnico:'Técnico'};
+  const roleLabel=ROLE_LABELS[window._userRole] || (window._userRole || '');
   const bar=document.createElement('div');
   bar.id='auth-userbar';
   bar.style.cssText='position:fixed;bottom:14px;left:14px;z-index:9998;display:flex;align-items:center;gap:8px;background:rgba(17,19,29,.92);border:1px solid #252840;border-radius:24px;padding:6px 8px 6px 14px;font-family:"DM Sans",sans-serif;font-size:12px;color:#8890b0;box-shadow:0 6px 20px rgba(0,0,0,.4)';
-  bar.innerHTML=`<span>🔒 ${email}</span><button id="auth-logout" style="background:#1a1d2a;border:1px solid #252840;border-radius:18px;color:#f0516a;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">Sair</button>`;
+  bar.innerHTML=`<span>🔒 ${email}</span><span style="background:#1e2132;border:1px solid #363a5a;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:600;color:#5b6ef5">${roleLabel}</span><button id="auth-logout" style="background:#1a1d2a;border:1px solid #252840;border-radius:18px;color:#f0516a;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">Sair</button>`;
   document.body.appendChild(bar);
   document.getElementById('auth-logout').addEventListener('click', async()=>{
     try{ await db.auth.signOut(); }catch(e){}

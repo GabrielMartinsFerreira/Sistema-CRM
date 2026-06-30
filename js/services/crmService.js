@@ -10,6 +10,7 @@ const crmService = {
   /* ── LEADS ── */
   listarLeads(){
     return db.from(TABLES.LEADS).select('*')
+      .eq('arquivado', false)
       .order('order_index',{ascending:true,nullsFirst:false})
       .order('id',{ascending:true});
   },
@@ -18,8 +19,15 @@ const crmService = {
   },
   inserirLead(lead){ return db.from(TABLES.LEADS).insert([lead]); },
   atualizarLead(id, dados){ return db.from(TABLES.LEADS).update(dados).eq('id', id); },
-  deletarLead(id){ return db.from(TABLES.LEADS).delete().eq('id', id); },
-  resetarLeads(){ return db.from(TABLES.LEADS).delete().neq('id', 0); },
+  deletarLead(id){ return db.from(TABLES.LEADS).update({arquivado:true}).eq('id', id); },
+  arquivarLead(id){ return db.from(TABLES.LEADS).update({arquivado:true}).eq('id', id); },
+  resetarLeads(confirmacao){
+    if(confirmacao !== 'CONFIRMAR_RESET_TOTAL'){
+      console.error('resetarLeads: confirmação obrigatória não fornecida');
+      return;
+    }
+    return db.from(TABLES.LEADS).delete().neq('id', 0);
+  },
   atualizarOrdem(updates){
     return Promise.all(updates.map(u =>
       db.from(TABLES.LEADS).update({order_index:u.order_index}).eq('id', u.id)

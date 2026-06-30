@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Home — GG TECH CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e16;--bg-card:#13151f;--bg-card2:#191c28;--bg-input:#1e2132;
+  --border:#252840;--border-hover:#363a5a;--text:#dde1f0;--text-muted:#5c6080;--text-dim:#8890b0;
+  --accent:#5b6ef5;--accent-glow:rgba(91,110,245,0.18);
+  --green:#22d48f;--green-dim:rgba(34,212,143,0.12);
+  --yellow:#f5c542;--yellow-dim:rgba(245,197,66,0.12);
+  --red:#f0516a;--red-dim:rgba(240,81,106,0.12);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.12);
+  --radius:14px;--radius-sm:8px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+a{color:inherit;text-decoration:none}
+
+/* ── HEADER ── */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.logo-wrap{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--accent-glow);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(91,110,245,0.35)}
+.logo-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.logo-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-nav{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
+.btn-nav-accent{background:linear-gradient(135deg,var(--accent),#7b4ff5);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(91,110,245,0.3)}
+.btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(91,110,245,0.45)}
+
+/* ── OVERLAY ── */
+#overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s}
+.kpi-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px 0 0 2px}
+.kc-fat::before{background:var(--accent)}
+.kc-lucro::before{background:var(--green)}
+.kc-margem::before{background:var(--yellow)}
+.kc-caixa::before{background:var(--blue)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+.kpi-value{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-1px;line-height:1.1}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+
+/* ── ALERT CARDS ── */
+.alerta-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.alerta-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s;position:relative;overflow:hidden}
+.alerta-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
+.alerta-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px}
+.ac-danger::before{background:var(--red)}
+.ac-warn::before{background:var(--yellow)}
+.ac-orange::before{background:var(--orange)}
+.ac-top{display:flex;align-items:flex-start;justify-content:space-between}
+.ac-icon{font-size:26px;line-height:1}
+.ac-badge{font-size:32px;font-weight:800;font-family:'DM Mono',monospace;letter-spacing:-1.5px;line-height:1}
+.ac-badge.zero{color:var(--text-muted)}
+.ac-badge.has-danger{color:var(--red)}
+.ac-badge.has-warn{color:var(--yellow)}
+.ac-badge.has-orange{color:var(--orange)}
+.ac-label{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.ac-sub{font-size:11px;color:var(--text-muted);line-height:1.5;flex:1}
+.ac-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;align-self:flex-start;margin-top:4px}
+.ac-btn:hover{border-color:var(--border-hover);color:var(--text)}
+
+/* ── CHART CARD ── */
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:24px}
+.chart-wrap{position:relative;height:280px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .alerta-row{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr}
+}
+/* ─── SIDEBAR NAVIGATION ─── */
+:root{--sb-w:220px;--sb-w-col:56px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:250}
+.sb-overlay.open{display:block}
+.sb{position:fixed;left:0;top:0;height:100%;width:var(--sb-w);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:300;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.sb-top{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sb-top::-webkit-scrollbar{display:none}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 14px 14px;border-bottom:1px solid var(--border);text-decoration:none;white-space:nowrap}
+.sb-logo-icon{font-size:20px;flex-shrink:0;width:24px;text-align:center}
+.sb-logo-text{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.4px;transition:opacity .15s,max-width .22s;overflow:hidden;max-width:180px}
+.sb-group{padding:10px 0 2px}
+.sb-group-label{font-size:9px;font-weight:800;letter-spacing:1.3px;color:var(--text-muted);text-transform:uppercase;padding:0 16px 6px;white-space:nowrap;transition:opacity .15s;overflow:hidden}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:var(--radius-sm);color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s;position:relative}
+.sb-link:hover{background:var(--bg-card2);color:var(--text)}
+.sb-link.active{background:rgba(91,110,245,.14);color:var(--accent);font-weight:700}
+.sb-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;line-height:1}
+.sb-lbl{overflow:hidden;transition:opacity .15s,max-width .22s;max-width:150px}
+.sb-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;line-height:16px}
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.sb-user-email{font-size:10px;color:var(--text-muted);padding:2px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.sb-signout-btn{width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;overflow:hidden}
+.sb-signout-btn:hover{background:var(--red-dim,rgba(240,81,106,.12));color:var(--red);border-color:rgba(240,81,106,.35)}
+.sb.collapsed{width:var(--sb-w-col)}
+.sb.collapsed .sb-logo{padding:18px 10px 14px;justify-content:center}
+.sb.collapsed .sb-logo-text,.sb.collapsed .sb-group-label,.sb.collapsed .sb-lbl,.sb.collapsed .sb-user-email{opacity:0;max-width:0}
+.sb.collapsed .sb-link{padding:9px 6px;margin:1px 6px;justify-content:center}
+.sb.collapsed .sb-badge{right:4px;top:4px;transform:none;font-size:9px;min-width:14px}
+.sb.collapsed .sb-footer{padding:8px 6px;text-align:center}
+.sb.collapsed .sb-signout-btn{gap:0;font-size:14px;padding:7px 4px;border:none}
+.sb-main{margin-left:var(--sb-w);transition:margin-left .22s cubic-bezier(.4,0,.2,1)}
+body.sb-collapsed .sb-main{margin-left:var(--sb-w-col)}
+.user-bar{display:none!important}
+.sb-hamburger{display:none;position:fixed;top:12px;z-index:400;width:34px;height:34px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;left:calc(var(--sb-w-col) + 8px);transition:left .22s cubic-bezier(.4,0,.2,1)}
+.sb.mobile-open~.sb-hamburger{left:calc(var(--sb-w) + 8px)}
+@media(max-width:768px){.sb-hamburger{display:flex}.sb{width:var(--sb-w-col)}.sb.mobile-open{width:var(--sb-w)}.sb-main{margin-left:var(--sb-w-col)}}
+</style>
+</head>
+<body>
+<div class="sb-overlay" id="sb-overlay"></div>
+<nav class="sb" id="sb">
+  <div class="sb-top">
+    <a class="sb-logo" href="home.html"><span class="sb-logo-icon">⚙️</span><span class="sb-logo-text">GG&nbsp;TECH</span></a>
+    <div class="sb-group">
+      <div class="sb-group-label">COMERCIAL</div>
+      <a href="home.html"    class="sb-link"><span class="sb-icon">🏠</span><span class="sb-lbl">Home</span></a>
+      <a href="index.html"   class="sb-link"><span class="sb-icon">📋</span><span class="sb-lbl">Pipeline</span></a>
+      <a href="pedidos.html" class="sb-link"><span class="sb-icon">📦</span><span class="sb-lbl">Pedidos</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">FINANCEIRO</div>
+      <a href="faturamento.html" class="sb-link"><span class="sb-icon">💰</span><span class="sb-lbl">Faturamento</span><span class="sb-badge" id="sb-badge-fat" style="display:none">0</span></a>
+      <a href="caixa.html"       class="sb-link"><span class="sb-icon">📈</span><span class="sb-lbl">Caixa</span><span class="sb-badge" id="sb-badge-caixa" style="display:none">0</span></a>
+      <a href="relatorios.html"  class="sb-link"><span class="sb-icon">📊</span><span class="sb-lbl">Relatórios</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">COMPRAS</div>
+      <a href="compras.html" class="sb-link"><span class="sb-icon">🛒</span><span class="sb-lbl">Compras</span></a>
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user-email" id="sb-user-email">—</div>
+    <button class="sb-signout-btn" onclick="db.auth.signOut().then(()=>location.reload())">⏻ Sair</button>
+  </div>
+</nav>
+<button class="sb-hamburger" id="sb-hamburger" onclick="window._sbToggle&&window._sbToggle()" aria-label="Menu">☰</button>
+<script>
+(function(){
+  var p=location.pathname.split('/').pop()||'home.html';
+  document.querySelectorAll('.sb-link').forEach(function(el){if(el.getAttribute('href')===p)el.classList.add('active');});
+  function _tryEmail(){var s=window._authSession;if(s&&s.user&&s.user.email){var el=document.getElementById('sb-user-email');if(el)el.textContent=s.user.email;return true;}return false;}
+  if(!_tryEmail()){var _eObs=new MutationObserver(function(){if(_tryEmail())_eObs.disconnect();});_eObs.observe(document.body,{childList:true});}
+  setTimeout(function(){var src=document.getElementById('alerta-caixa');if(src){var _bObs=new MutationObserver(function(){var b=document.getElementById('sb-badge-caixa');if(!b)return;var show=src.style.display!=='none'&&src.textContent;if(show){b.textContent=src.textContent;b.style.display='';}else b.style.display='none';});_bObs.observe(src,{childList:true,attributes:true,attributeFilter:['style']});}},500);
+  window._sbToggle=function(){var sb=document.getElementById('sb');var ovl=document.getElementById('sb-overlay');if(window.innerWidth<768){sb.classList.toggle('mobile-open');if(ovl)ovl.classList.toggle('open');}else{sb.classList.toggle('collapsed');document.body.classList.toggle('sb-collapsed');}};
+  window.setSidebarBadge=function(id,n){var el=document.getElementById('sb-badge-'+id);if(!el)return;if(n>0){el.style.display='';el.textContent=n;}else el.style.display='none';};
+  document.getElementById('sb-overlay').addEventListener('click',function(){window._sbToggle&&window._sbToggle();});
+})();
+</script>
+<div class="sb-main">
+
+<div id="overlay"><div class="spinner"></div></div>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🏠</div>
+    <div>
+      <div class="logo-title">GG TECH — Dashboard</div>
+      <div class="logo-sub" id="mes-label">Carregando…</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ BLOCO 1 — KPIs DO MÊS ═══════════════ -->
+<div class="section-title" id="section-mes">📅 Resumo — Mês Atual</div>
+<div class="kpi-row">
+  <div class="kpi-card kc-fat">
+    <div class="kpi-label">Faturamento do Mês</div>
+    <div class="kpi-value" id="kpi-fat">—</div>
+    <div class="kpi-sub" id="kpi-fat-sub">pedidos aprovados</div>
+  </div>
+  <div class="kpi-card kc-lucro">
+    <div class="kpi-label">Lucro Estimado</div>
+    <div class="kpi-value" id="kpi-lucro">—</div>
+    <div class="kpi-sub">após custos diretos + fixos</div>
+  </div>
+  <div class="kpi-card kc-margem">
+    <div class="kpi-label">Margem %</div>
+    <div class="kpi-value" id="kpi-margem">—</div>
+    <div class="kpi-sub">lucro / faturamento</div>
+  </div>
+  <div class="kpi-card kc-caixa">
+    <div class="kpi-label">Caixa Hoje</div>
+    <div class="kpi-value" id="kpi-caixa">—</div>
+    <div class="kpi-sub">saldo inicial + entradas – saídas</div>
+  </div>
+</div>
+
+<!-- ═══════════════ BLOCO 2 — ALERTAS ═══════════════ -->
+<div class="section-title">🚨 Alertas Ativos</div>
+<div class="alerta-row">
+  <div class="alerta-card ac-danger">
+    <div class="ac-top">
+      <span class="ac-icon">💸</span>
+      <span class="ac-badge zero" id="badge-contas">0</span>
+    </div>
+    <div class="ac-label">Contas Vencidas</div>
+    <div class="ac-sub">Contas a pagar com data de vencimento passada e ainda em aberto</div>
+    <a href="faturamento.html" class="ac-btn">Ver contas →</a>
+  </div>
+  <div class="alerta-card ac-warn">
+    <div class="ac-top">
+      <span class="ac-icon">📭</span>
+      <span class="ac-badge zero" id="badge-orc">0</span>
+    </div>
+    <div class="ac-label">Orçamentos Sem Retorno</div>
+    <div class="ac-sub">Leads em status Orçamento há mais de 7 dias sem conversão em pedido</div>
+    <a href="index.html" class="ac-btn">Ver leads →</a>
+  </div>
+  <div class="alerta-card ac-orange">
+    <div class="ac-top">
+      <span class="ac-icon">⚠️</span>
+      <span class="ac-badge zero" id="badge-prom">0</span>
+    </div>
+    <div class="ac-label">Promessas Quebradas</div>
+    <div class="ac-sub">Promessas de pagamento com data prometida vencida e sem quitação</div>
+    <a href="pedidos.html" class="ac-btn">Ver cobrança →</a>
+  </div>
+</div>
+
+<!-- ═══════════════ BLOCO 3 — GRÁFICO ═══════════════ -->
+<div class="section-title">📈 Faturamento vs. Lucro — Últimos 6 Meses</div>
+<div class="chart-card">
+  <div class="chart-wrap">
+    <canvas id="chart-fat-lucro"></canvas>
+  </div>
+</div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/supabase.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/services/crmService.js"></script>
+<script src="js/services/financeiroService.js"></script>
+
+<script>
+/* db, TABLES → supabase.js (global) | brl, toast → utils.js (global)
+ * financeiroService → services/financeiroService.js (global)
+ * NÃO redeclarar db ou TABLES */
+
+const MESES_PT    = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+let _grafico = null;
+
+function _setBadge(id, n, cls){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = n;
+  el.className = 'ac-badge ' + (n > 0 ? cls : 'zero');
+}
+
+async function carregar(){
+  if(!(await authGate())) return;
+  try{
+    const hoje    = new Date();
+    const hojeStr = hoje.toISOString().slice(0,10);
+    const mes     = hoje.getMonth();   // 0-11
+    const ano     = hoje.getFullYear();
+
+    const seteAt = new Date(hoje);
+    seteAt.setDate(seteAt.getDate() - 7);
+    const seteAtStr = seteAt.toISOString();
+
+    document.getElementById('section-mes').textContent =
+      '📅 Resumo — ' + MESES_PT[mes] + ' ' + ano;
+    document.getElementById('mes-label').textContent =
+      MESES_PT[mes] + ' ' + ano;
+
+    const [
+      {data: pedidos,   error: e1},
+      {data: fats,      error: e2},
+      {data: gastos,    error: e3},
+      {data: variaveis, error: e4},
+      {data: configCaixa},
+      {data: movs},
+      {data: contasVenc},
+      {data: orcSemRet},
+      {data: promQuebr}
+    ] = await Promise.all([
+      financeiroService.carregarPedidos(),
+      financeiroService.carregarFaturamento(),
+      financeiroService.carregarGastos(),
+      financeiroService.carregarVariaveis(),
+      db.from('config_caixa').select('saldo_inicial').maybeSingle(),
+      db.from(TABLES.MOVIMENTACOES).select('tipo,valor,valor_bruto,status,is_parcela_cartao'),
+      db.from('contas_a_pagar').select('id')
+        .neq('status','pago').not('data_vencimento','is',null).lt('data_vencimento',hojeStr),
+      db.from(TABLES.LEADS).select('id')
+        .eq('status','Orçamento').eq('arquivado',false).lt('created_at',seteAtStr),
+      db.from('vw_promessas_quebradas').select('id')
+    ]);
+
+    if(e1||e2||e3||e4) throw new Error([e1,e2,e3,e4].find(Boolean)?.message || 'Erro ao carregar dados');
+
+    /* ── fatMap ── */
+    const fatMap = {};
+    (fats||[]).forEach(f => { fatMap[f.lead_id] = f; });
+
+    /* ── BLOCO 1: KPIs ── */
+    const resumo   = financeiroService.calcResumoMes(pedidos, fatMap, gastos, mes, ano, variaveis);
+    const fatMes   = Math.round(resumo.receita);
+    const lucroMes = Math.round(resumo.lucroProjetado);
+    const margemPct = fatMes > 0 ? lucroMes / fatMes * 100 : 0;
+
+    const saldoInicial = Math.round(parseFloat(configCaixa?.saldo_inicial || 0));
+    const entradasConf = Math.round(
+      (movs||[])
+        .filter(m => m.tipo==='Entrada' && !m.is_parcela_cartao && (m.status||'Confirmado')==='Confirmado')
+        .reduce((s,m) => s + parseFloat(m.valor_bruto||m.valor||0), 0)
+    );
+    const saidasConf = Math.round(
+      (movs||[])
+        .filter(m => m.tipo==='Saída' && (m.status==='Confirmado'||m.status==='Pago'))
+        .reduce((s,m) => s + parseFloat(m.valor||0), 0)
+    );
+    const caixaHoje = saldoInicial + entradasConf - saidasConf;
+
+    const nPedMes = (pedidos||[]).filter(p =>
+      financeiroService._mesDe(p.data_aprovacao)===mes &&
+      financeiroService._anoDe(p.data_aprovacao)===ano
+    ).length;
+
+    document.getElementById('kpi-fat').textContent   = brl(fatMes);
+    document.getElementById('kpi-fat-sub').textContent = nPedMes + ' pedido(s) aprovado(s)';
+    document.getElementById('kpi-lucro').textContent  = brl(lucroMes);
+    document.getElementById('kpi-lucro').style.color  = lucroMes < 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('kpi-margem').textContent = margemPct.toFixed(1) + '%';
+    document.getElementById('kpi-margem').style.color =
+      margemPct >= 30 ? 'var(--green)' : margemPct >= 15 ? 'var(--yellow)' : 'var(--red)';
+    document.getElementById('kpi-caixa').textContent  = brl(caixaHoje);
+    document.getElementById('kpi-caixa').style.color  = caixaHoje < 0 ? 'var(--red)' : 'var(--blue)';
+
+    /* ── BLOCO 2: Alertas ── */
+    _setBadge('badge-contas', (contasVenc||[]).length, 'has-danger');
+    _setBadge('badge-orc',    (orcSemRet||[]).length,  'has-warn');
+    _setBadge('badge-prom',   (promQuebr||[]).length,  'has-orange');
+
+    /* ── BLOCO 3: Gráfico 6 meses ── */
+    const janela6 = [];
+    for(let i = 5; i >= 0; i--){
+      const d = new Date(ano, mes - i, 1);
+      janela6.push({mes: d.getMonth(), ano: d.getFullYear(), label: MESES_ABREV[d.getMonth()]});
+    }
+
+    const anosUsados = [...new Set(janela6.map(m => m.ano))];
+    const dreCache   = {};
+    for(const a of anosUsados){
+      dreCache[a] = financeiroService.calcDRE(pedidos, fatMap, gastos, a, 0, variaveis);
+    }
+
+    const labelsGraf = janela6.map(m => m.label);
+    const bruto6     = janela6.map(m => Math.round(dreCache[m.ano].bruto[m.mes]));
+    const lucro6     = janela6.map(m => Math.round(dreCache[m.ano].lucro[m.mes]));
+
+    if(_grafico){ _grafico.destroy(); _grafico=null; }
+    _grafico = new Chart(
+      document.getElementById('chart-fat-lucro').getContext('2d'),
+      {
+        type: 'line',
+        data: {
+          labels: labelsGraf,
+          datasets: [
+            {
+              label: 'Faturamento',
+              data: bruto6,
+              borderColor: '#22d48f',
+              backgroundColor: 'rgba(34,212,143,0.07)',
+              tension: 0.35, fill: true,
+              pointRadius: 5, pointHoverRadius: 7, borderWidth: 2.5
+            },
+            {
+              label: 'Lucro',
+              data: lucro6,
+              borderColor: '#5b6ef5',
+              backgroundColor: 'rgba(91,110,245,0.06)',
+              tension: 0.35, fill: false,
+              pointRadius: 5, pointHoverRadius: 7, borderWidth: 2.5
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: {intersect: false, mode: 'index'},
+          plugins: {
+            legend: {
+              labels: {
+                color: '#8890b0',
+                font: {family: 'DM Sans', size: 12, weight: '600'},
+                usePointStyle: true, pointStyle: 'circle', padding: 20
+              }
+            },
+            tooltip: {
+              backgroundColor: '#13151f', borderColor: '#252840', borderWidth: 1,
+              titleColor: '#dde1f0', bodyColor: '#8890b0', padding: 12,
+              callbacks: {
+                label(c){
+                  const v = Math.round(c.parsed.y);
+                  return ' ' + c.dataset.label + ': R$ ' + v.toLocaleString('pt-BR');
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {color: 'rgba(37,40,64,0.6)'},
+              ticks: {color: '#5c6080', font: {family: 'DM Sans', size: 11}}
+            },
+            y: {
+              grid: {color: 'rgba(37,40,64,0.6)'},
+              ticks: {
+                color: '#5c6080', font: {family: 'DM Sans', size: 11},
+                callback(v){
+                  if(Math.abs(v) >= 1000) return 'R$' + (v/1000).toFixed(0) + 'k';
+                  return 'R$' + v;
+                }
+              }
+            }
+          }
+        }
+      }
+    );
+
+  }catch(e){
+    toast('Erro ao carregar dashboard: ' + e.message, 'err');
+    console.error('[Home]', e);
+  }finally{
+    const ov = document.getElementById('overlay');
+    ov.style.opacity = '0';
+    setTimeout(() => ov.style.display = 'none', 400);
+  }
+}
+
+window.onload = carregar;
+</script>
+</div>
+</body>
+</html>

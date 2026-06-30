@@ -201,8 +201,9 @@ const caixaService = {
 
   _dataDeMesAno(dia, mes, ano){
     if(!dia || dia < 1) return null;
-    const m = String(mes + 1).padStart(2,'0');
-    const d = String(Math.min(dia, 28)).padStart(2,'0'); // evita fim-de-mês inválido
+    const m         = String(mes + 1).padStart(2,'0');
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    const d         = String(Math.min(dia, ultimoDia)).padStart(2,'0');
     return `${ano}-${m}-${d}`;
   },
 

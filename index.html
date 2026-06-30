@@ -27,7 +27,9 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
-.container{max-width:1500px;margin:0 auto}
+.container{max-width:1500px;margin-left:var(--sb-w)}
+body.sb-collapsed .container{margin-left:var(--sb-w-col)}
+@media(max-width:768px){.container{margin-left:var(--sb-w-col)!important}}
 
 /* HEADER */
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
@@ -476,9 +478,83 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
 @media(max-width:400px){
   body{padding:8px}
 }
+/* ─── SIDEBAR NAVIGATION ─── */
+:root{--sb-w:220px;--sb-w-col:56px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:250}
+.sb-overlay.open{display:block}
+.sb{position:fixed;left:0;top:0;height:100%;width:var(--sb-w);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:300;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.sb-top{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sb-top::-webkit-scrollbar{display:none}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 14px 14px;border-bottom:1px solid var(--border);text-decoration:none;white-space:nowrap}
+.sb-logo-icon{font-size:20px;flex-shrink:0;width:24px;text-align:center}
+.sb-logo-text{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.4px;transition:opacity .15s,max-width .22s;overflow:hidden;max-width:180px}
+.sb-group{padding:10px 0 2px}
+.sb-group-label{font-size:9px;font-weight:800;letter-spacing:1.3px;color:var(--text-muted);text-transform:uppercase;padding:0 16px 6px;white-space:nowrap;transition:opacity .15s;overflow:hidden}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:var(--radius-sm);color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s;position:relative}
+.sb-link:hover{background:var(--bg-card2);color:var(--text)}
+.sb-link.active{background:rgba(91,110,245,.14);color:var(--accent);font-weight:700}
+.sb-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;line-height:1}
+.sb-lbl{overflow:hidden;transition:opacity .15s,max-width .22s;max-width:150px}
+.sb-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;line-height:16px}
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.sb-user-email{font-size:10px;color:var(--text-muted);padding:2px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.sb-signout-btn{width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;overflow:hidden}
+.sb-signout-btn:hover{background:var(--red-dim,rgba(240,81,106,.12));color:var(--red);border-color:rgba(240,81,106,.35)}
+.sb.collapsed{width:var(--sb-w-col)}
+.sb.collapsed .sb-logo{padding:18px 10px 14px;justify-content:center}
+.sb.collapsed .sb-logo-text,.sb.collapsed .sb-group-label,.sb.collapsed .sb-lbl,.sb.collapsed .sb-user-email{opacity:0;max-width:0}
+.sb.collapsed .sb-link{padding:9px 6px;margin:1px 6px;justify-content:center}
+.sb.collapsed .sb-badge{right:4px;top:4px;transform:none;font-size:9px;min-width:14px}
+.sb.collapsed .sb-footer{padding:8px 6px;text-align:center}
+.sb.collapsed .sb-signout-btn{gap:0;font-size:14px;padding:7px 4px;border:none}
+.sb-main{margin-left:var(--sb-w);transition:margin-left .22s cubic-bezier(.4,0,.2,1)}
+body.sb-collapsed .sb-main{margin-left:var(--sb-w-col)}
+.user-bar{display:none!important}
+.sb-hamburger{display:none;position:fixed;top:12px;z-index:400;width:34px;height:34px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;left:calc(var(--sb-w-col) + 8px);transition:left .22s cubic-bezier(.4,0,.2,1)}
+.sb.mobile-open~.sb-hamburger{left:calc(var(--sb-w) + 8px)}
+@media(max-width:768px){.sb-hamburger{display:flex}.sb{width:var(--sb-w-col)}.sb.mobile-open{width:var(--sb-w)}.sb-main{margin-left:var(--sb-w-col)}}
 </style>
 </head>
 <body>
+<div class="sb-overlay" id="sb-overlay"></div>
+<nav class="sb" id="sb">
+  <div class="sb-top">
+    <a class="sb-logo" href="home.html"><span class="sb-logo-icon">⚙️</span><span class="sb-logo-text">GG&nbsp;TECH</span></a>
+    <div class="sb-group">
+      <div class="sb-group-label">COMERCIAL</div>
+      <a href="home.html"    class="sb-link"><span class="sb-icon">🏠</span><span class="sb-lbl">Home</span></a>
+      <a href="index.html"   class="sb-link"><span class="sb-icon">📋</span><span class="sb-lbl">Pipeline</span></a>
+      <a href="pedidos.html" class="sb-link"><span class="sb-icon">📦</span><span class="sb-lbl">Pedidos</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">FINANCEIRO</div>
+      <a href="faturamento.html" class="sb-link"><span class="sb-icon">💰</span><span class="sb-lbl">Faturamento</span><span class="sb-badge" id="sb-badge-fat" style="display:none">0</span></a>
+      <a href="caixa.html"       class="sb-link"><span class="sb-icon">📈</span><span class="sb-lbl">Caixa</span><span class="sb-badge" id="sb-badge-caixa" style="display:none">0</span></a>
+      <a href="relatorios.html"  class="sb-link"><span class="sb-icon">📊</span><span class="sb-lbl">Relatórios</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">COMPRAS</div>
+      <a href="compras.html" class="sb-link"><span class="sb-icon">🛒</span><span class="sb-lbl">Compras</span></a>
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user-email" id="sb-user-email">—</div>
+    <button class="sb-signout-btn" onclick="db.auth.signOut().then(()=>location.reload())">⏻ Sair</button>
+  </div>
+</nav>
+<button class="sb-hamburger" id="sb-hamburger" onclick="window._sbToggle&&window._sbToggle()" aria-label="Menu">☰</button>
+<script>
+(function(){
+  var p=location.pathname.split('/').pop()||'home.html';
+  document.querySelectorAll('.sb-link').forEach(function(el){if(el.getAttribute('href')===p)el.classList.add('active');});
+  function _tryEmail(){var s=window._authSession;if(s&&s.user&&s.user.email){var el=document.getElementById('sb-user-email');if(el)el.textContent=s.user.email;return true;}return false;}
+  if(!_tryEmail()){var _eObs=new MutationObserver(function(){if(_tryEmail())_eObs.disconnect();});_eObs.observe(document.body,{childList:true});}
+  setTimeout(function(){var src=document.getElementById('alerta-caixa');if(src){var _bObs=new MutationObserver(function(){var b=document.getElementById('sb-badge-caixa');if(!b)return;var show=src.style.display!=='none'&&src.textContent;if(show){b.textContent=src.textContent;b.style.display='';}else b.style.display='none';});_bObs.observe(src,{childList:true,attributes:true,attributeFilter:['style']});}},500);
+  window._sbToggle=function(){var sb=document.getElementById('sb');var ovl=document.getElementById('sb-overlay');if(window.innerWidth<768){sb.classList.toggle('mobile-open');if(ovl)ovl.classList.toggle('open');}else{sb.classList.toggle('collapsed');document.body.classList.toggle('sb-collapsed');}};
+  window.setSidebarBadge=function(id,n){var el=document.getElementById('sb-badge-'+id);if(!el)return;if(n>0){el.style.display='';el.textContent=n;}else el.style.display='none';};
+  document.getElementById('sb-overlay').addEventListener('click',function(){window._sbToggle&&window._sbToggle();});
+})();
+</script>
 <div id="overlay"><div class="spinner"></div><p>Conectando ao Supabase…</p></div>
 <div id="toast"></div>
 
@@ -952,12 +1028,8 @@ input[type="date"].analytics-input::-webkit-calendar-picker-indicator{filter:inv
     <div class="header-actions">
       <button class="btn-aprovar" onclick="abrirAprovarModal()">✅ Aprovar Orçamento</button>
       <button class="btn-clientes" onclick="abrirGerenciarClientes()">👥 Clientes</button>
-      <a href="pedidos.html" class="btn-reports" style="background:linear-gradient(135deg,var(--purple),#7b4ff5);box-shadow:0 4px 16px rgba(167,139,250,0.3)">📦 Pedidos</a>
-      <a href="compras.html" class="btn-reports" style="background:linear-gradient(135deg,var(--orange),#e56b20);box-shadow:0 4px 16px rgba(251,146,60,0.3)">🛒 Compras</a>
-      <a href="faturamento.html" class="btn-reports" style="background:linear-gradient(135deg,var(--green),#17a870);box-shadow:0 4px 16px rgba(34,212,143,0.3)">💰 Faturamento</a>
-      <a href="relatorios.html" class="btn-reports">📈 Relatórios</a>
       <button class="btn btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
-      <button class="btn btn-danger" onclick="abrirResetModal()">⚠️ Resetar</button>
+      <button class="btn btn-danger gestor-only" onclick="abrirResetModal()">⚠️ Resetar</button>
     </div>
   </header>
 
@@ -1479,11 +1551,11 @@ async function adicionarLead(lead){
 }
 
 async function removeLead(id){
-  if(!confirm('Excluir este lead permanentemente?'))return;
+  if(!confirm('Arquivar este lead? O histórico financeiro será preservado.'))return;
   try{
     const{error}=await crmService.deletarLead(id);
     if(error)throw error;
-    toast('Lead removido.');
+    toast('Lead arquivado. Histórico preservado.');
     await carregarDados();
   }catch(e){toast('Erro: '+e.message,'err')}
 }
@@ -2010,7 +2082,7 @@ function buildRow(l){
       <button class="btn-view" onclick="verDetalhes(${id})" title="Ver detalhes">🔍</button>
       <button class="btn-edit" onclick="abrirModal(${id})" title="Editar">✏️</button>
       ${l.status!=='Pedido'?`<button class="btn-aprov-row" onclick="abrirAprovarModal(${id})" title="Aprovar como Pedido">✓</button>`:''}
-      <button class="btn-del" onclick="removeLead(${id})" title="Excluir">✕</button>
+      <button class="btn-del gestor-only" onclick="removeLead(${id})" title="Arquivar lead">🗂</button>
     </div></td>`;
   // Dados via textContent — imune a XSS
   const c=tr.querySelectorAll('td');

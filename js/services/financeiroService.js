@@ -208,6 +208,26 @@ const financeiroService = {
       pctFixos: receita>0 ? fixos/receita*100 : 0,
       pctVariaveis: receita>0 ? custosObras/receita*100 : 0
     };
+  },
+
+  /* ─────────── IMPOSTOS E OBRIGAÇÕES FISCAIS ─────────── */
+  carregarImpostos(mes, ano){
+    return db.from('crm_impostos').select('*')
+      .eq('competencia_mes', mes)
+      .eq('competencia_ano', ano)
+      .order('data_vencimento',{ascending:true,nullsFirst:false});
+  },
+  inserirImposto(dados){
+    return db.from('crm_impostos').insert([dados]).select().single();
+  },
+  atualizarImposto(id, upd){
+    return db.from('crm_impostos').update(upd).eq('id', id);
+  },
+  deletarImposto(id){
+    return db.from('crm_impostos').delete().eq('id', id);
+  },
+  calcularImpostoAutomatico(faturamentoMes, aliquotaPct){
+    return Math.round(parseFloat(faturamentoMes||0) * parseFloat(aliquotaPct||0) / 100);
   }
 };
 window.financeiroService = financeiroService;

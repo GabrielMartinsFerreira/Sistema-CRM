@@ -21,7 +21,7 @@
   --radius:14px;--radius-sm:8px
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px;max-width:1280px;margin:0 auto}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
 a{color:inherit;text-decoration:none}
 
 /* HEADER */
@@ -35,6 +35,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .btn-nav:hover{border-color:var(--border-hover);color:var(--text)}
 .btn-nav-accent{background:linear-gradient(135deg,var(--accent),#7b4ff5);border-color:transparent;color:white;box-shadow:0 4px 16px rgba(91,110,245,0.3)}
 .btn-nav-accent:hover{transform:translateY(-1px);color:white;box-shadow:0 6px 24px rgba(91,110,245,0.45)}
+.badge-alerta{display:none;font-size:9px;font-weight:800;background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;letter-spacing:.3px;line-height:1.4}
 
 /* OVERLAY */
 #overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
@@ -296,6 +297,28 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 #tab-obras.active{border-bottom-color:var(--green);color:var(--green)}
 #tab-gastos.active{border-bottom-color:var(--orange);color:var(--orange)}
 #tab-variaveis.active{border-bottom-color:var(--accent);color:var(--accent)}
+#tab-contas-pagar.active{border-bottom-color:var(--blue);color:var(--blue)}
+#tab-impostos.active{border-bottom-color:var(--yellow);color:var(--yellow)}
+/* ─── IMPOSTOS FISCAIS ─── */
+.imp-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:900px){.imp-kpi-row{grid-template-columns:1fr 1fr}}
+.imp-kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.imp-kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px 0 0 2px}
+.imp-kpi-prov::before{background:var(--accent)}
+.imp-kpi-pago::before{background:var(--green)}
+.imp-kpi-apagar::before{background:var(--yellow)}
+.imp-kpi-atraso::before{background:var(--red)}
+.imp-kpi-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.imp-kpi-value{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.8px}
+.imp-table{width:100%;border-collapse:collapse;font-size:13px}
+.imp-table th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:0 10px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.imp-table td{padding:11px 10px;border-bottom:1px solid rgba(37,40,64,.6);vertical-align:middle}
+.imp-table tr:last-child td{border-bottom:none}
+.imp-table tr:hover td{background:var(--bg-card2)}
+.imp-status{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.imp-status-pago{background:var(--green-dim,rgba(34,212,143,.12));color:var(--green);border:1px solid rgba(34,212,143,.3)}
+.imp-status-pendente{background:var(--yellow-dim,rgba(245,197,66,.1));color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+.imp-status-atrasado{background:var(--red-dim,rgba(240,81,106,.12));color:var(--red);border:1px solid rgba(240,81,106,.3)}
 .gv-form-row{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr 95px 78px auto;gap:10px;align-items:end}
 @media(max-width:1000px){.gv-form-row{grid-template-columns:1fr 1fr;}}
 .gv-indice-card{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:16px}
@@ -443,9 +466,84 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   .view-tab{padding:9px 10px;font-size:11px}
   .card{padding:11px}
 }
+/* ─── SIDEBAR NAVIGATION ─── */
+:root{--sb-w:220px;--sb-w-col:56px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:250}
+.sb-overlay.open{display:block}
+.sb{position:fixed;left:0;top:0;height:100%;width:var(--sb-w);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:300;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.sb-top{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sb-top::-webkit-scrollbar{display:none}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 14px 14px;border-bottom:1px solid var(--border);text-decoration:none;white-space:nowrap}
+.sb-logo-icon{font-size:20px;flex-shrink:0;width:24px;text-align:center}
+.sb-logo-text{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.4px;transition:opacity .15s,max-width .22s;overflow:hidden;max-width:180px}
+.sb-group{padding:10px 0 2px}
+.sb-group-label{font-size:9px;font-weight:800;letter-spacing:1.3px;color:var(--text-muted);text-transform:uppercase;padding:0 16px 6px;white-space:nowrap;transition:opacity .15s;overflow:hidden}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:var(--radius-sm);color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s;position:relative}
+.sb-link:hover{background:var(--bg-card2);color:var(--text)}
+.sb-link.active{background:rgba(91,110,245,.14);color:var(--accent);font-weight:700}
+.sb-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;line-height:1}
+.sb-lbl{overflow:hidden;transition:opacity .15s,max-width .22s;max-width:150px}
+.sb-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;line-height:16px}
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.sb-user-email{font-size:10px;color:var(--text-muted);padding:2px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+.sb-signout-btn{width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;overflow:hidden}
+.sb-signout-btn:hover{background:var(--red-dim,rgba(240,81,106,.12));color:var(--red);border-color:rgba(240,81,106,.35)}
+.sb.collapsed{width:var(--sb-w-col)}
+.sb.collapsed .sb-logo{padding:18px 10px 14px;justify-content:center}
+.sb.collapsed .sb-logo-text,.sb.collapsed .sb-group-label,.sb.collapsed .sb-lbl,.sb.collapsed .sb-user-email{opacity:0;max-width:0}
+.sb.collapsed .sb-link{padding:9px 6px;margin:1px 6px;justify-content:center}
+.sb.collapsed .sb-badge{right:4px;top:4px;transform:none;font-size:9px;min-width:14px}
+.sb.collapsed .sb-footer{padding:8px 6px;text-align:center}
+.sb.collapsed .sb-signout-btn{gap:0;font-size:14px;padding:7px 4px;border:none}
+.sb-main{margin-left:var(--sb-w);transition:margin-left .22s cubic-bezier(.4,0,.2,1)}
+body.sb-collapsed .sb-main{margin-left:var(--sb-w-col)}
+.user-bar{display:none!important}
+.sb-hamburger{display:none;position:fixed;top:12px;z-index:400;width:34px;height:34px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;left:calc(var(--sb-w-col) + 8px);transition:left .22s cubic-bezier(.4,0,.2,1)}
+.sb.mobile-open~.sb-hamburger{left:calc(var(--sb-w) + 8px)}
+@media(max-width:768px){.sb-hamburger{display:flex}.sb{width:var(--sb-w-col)}.sb.mobile-open{width:var(--sb-w)}.sb-main{margin-left:var(--sb-w-col)}}
 </style>
 </head>
 <body>
+<div class="sb-overlay" id="sb-overlay"></div>
+<nav class="sb" id="sb">
+  <div class="sb-top">
+    <a class="sb-logo" href="home.html"><span class="sb-logo-icon">⚙️</span><span class="sb-logo-text">GG&nbsp;TECH</span></a>
+    <div class="sb-group">
+      <div class="sb-group-label">COMERCIAL</div>
+      <a href="home.html"    class="sb-link"><span class="sb-icon">🏠</span><span class="sb-lbl">Home</span></a>
+      <a href="index.html"   class="sb-link"><span class="sb-icon">📋</span><span class="sb-lbl">Pipeline</span></a>
+      <a href="pedidos.html" class="sb-link"><span class="sb-icon">📦</span><span class="sb-lbl">Pedidos</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">FINANCEIRO</div>
+      <a href="faturamento.html" class="sb-link"><span class="sb-icon">💰</span><span class="sb-lbl">Faturamento</span><span class="sb-badge" id="sb-badge-fat" style="display:none">0</span></a>
+      <a href="caixa.html"       class="sb-link"><span class="sb-icon">📈</span><span class="sb-lbl">Caixa</span><span class="sb-badge" id="sb-badge-caixa" style="display:none">0</span></a>
+      <a href="relatorios.html"  class="sb-link"><span class="sb-icon">📊</span><span class="sb-lbl">Relatórios</span></a>
+    </div>
+    <div class="sb-group">
+      <div class="sb-group-label">COMPRAS</div>
+      <a href="compras.html" class="sb-link"><span class="sb-icon">🛒</span><span class="sb-lbl">Compras</span></a>
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user-email" id="sb-user-email">—</div>
+    <button class="sb-signout-btn" onclick="db.auth.signOut().then(()=>location.reload())">⏻ Sair</button>
+  </div>
+</nav>
+<button class="sb-hamburger" id="sb-hamburger" onclick="window._sbToggle&&window._sbToggle()" aria-label="Menu">☰</button>
+<script>
+(function(){
+  var p=location.pathname.split('/').pop()||'home.html';
+  document.querySelectorAll('.sb-link').forEach(function(el){if(el.getAttribute('href')===p)el.classList.add('active');});
+  function _tryEmail(){var s=window._authSession;if(s&&s.user&&s.user.email){var el=document.getElementById('sb-user-email');if(el)el.textContent=s.user.email;return true;}return false;}
+  if(!_tryEmail()){var _eObs=new MutationObserver(function(){if(_tryEmail())_eObs.disconnect();});_eObs.observe(document.body,{childList:true});}
+  setTimeout(function(){var src=document.getElementById('alerta-caixa');if(src){var _bObs=new MutationObserver(function(){var b=document.getElementById('sb-badge-caixa');if(!b)return;var show=src.style.display!=='none'&&src.textContent;if(show){b.textContent=src.textContent;b.style.display='';}else b.style.display='none';});_bObs.observe(src,{childList:true,attributes:true,attributeFilter:['style']});}},500);
+  window._sbToggle=function(){var sb=document.getElementById('sb');var ovl=document.getElementById('sb-overlay');if(window.innerWidth<768){sb.classList.toggle('mobile-open');if(ovl)ovl.classList.toggle('open');}else{sb.classList.toggle('collapsed');document.body.classList.toggle('sb-collapsed');}};
+  window.setSidebarBadge=function(id,n){var el=document.getElementById('sb-badge-'+id);if(!el)return;if(n>0){el.style.display='';el.textContent=n;}else el.style.display='none';};
+  document.getElementById('sb-overlay').addEventListener('click',function(){window._sbToggle&&window._sbToggle();});
+})();
+</script>
+<div class="sb-main">
 
 <div id="overlay"><div class="spinner"></div></div>
 
@@ -458,12 +556,8 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
     </div>
   </div>
   <div class="header-actions">
-    <a href="index.html" class="btn-nav">← Voltar ao CRM</a>
-    <a href="pedidos.html" class="btn-nav">📦 Pedidos</a>
-    <a href="compras.html" class="btn-nav" style="color:var(--orange);border-color:rgba(251,146,60,.35)">🛒 Compras</a>
-    <a href="caixa.html" class="btn-nav" style="color:var(--blue);border-color:rgba(56,189,248,.35)">💰 Caixa</a>
+    <span id="alerta-caixa" class="badge-alerta" style="display:none"></span>
     <button onclick="abrirGov()" class="btn-nav" style="color:var(--purple);border-color:rgba(167,139,250,.35)">📋 Governança</button>
-    <a href="relatorios.html" class="btn-nav btn-nav-accent">📈 Relatórios</a>
   </div>
 </header>
 
@@ -480,6 +574,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   <button class="view-tab" id="tab-gastos" onclick="setView('gastos')">🏢 Gastos Fixos</button>
   <button class="view-tab" id="tab-variaveis" onclick="setView('variaveis')">📉 Gastos Variáveis</button>
   <button class="view-tab" id="tab-contas-pagar" onclick="setView('contas-pagar')">📋 Contas a Pagar</button>
+  <button class="view-tab" id="tab-impostos" onclick="setView('impostos')">🧾 Impostos</button>
 </div>
 
 <div id="view-obras">
@@ -724,6 +819,35 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
 </div>
 
+
+<!-- VIEW IMPOSTOS -->
+<div id="view-impostos" style="display:none">
+  <div class="imp-kpi-row">
+    <div class="imp-kpi imp-kpi-prov">
+      <div class="imp-kpi-label">Total Provisionado</div>
+      <div class="imp-kpi-value" id="imp-k-prov">—</div>
+    </div>
+    <div class="imp-kpi imp-kpi-pago">
+      <div class="imp-kpi-label">Total Pago</div>
+      <div class="imp-kpi-value" id="imp-k-pago" style="color:var(--green)">—</div>
+    </div>
+    <div class="imp-kpi imp-kpi-apagar">
+      <div class="imp-kpi-label">A Pagar</div>
+      <div class="imp-kpi-value" id="imp-k-apagar" style="color:var(--yellow)">—</div>
+    </div>
+    <div class="imp-kpi imp-kpi-atraso">
+      <div class="imp-kpi-label">Atrasado</div>
+      <div class="imp-kpi-value" id="imp-k-atraso" style="color:var(--red)">—</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span>🧾 Impostos e Obrigações Fiscais</span>
+      <button onclick="abrirImpostoModal()" style="padding:8px 16px;background:var(--yellow);color:#0c0e16;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer">+ Lançar Imposto</button>
+    </div>
+    <div id="imp-table-wrap"><div class="empty-msg">Nenhum imposto lançado para este mês.</div></div>
+  </div>
+</div>
 
 <!-- MODAL DE BAIXA / CONFIRMAÇÃO DE PAGAMENTO -->
 <div class="modal-overlay" id="gf-pay-modal">
@@ -1255,6 +1379,110 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
   </div>
 </div>
 
+<!-- MODAL IMPOSTO — INSERIR / EDITAR -->
+<div class="modal-overlay" id="imp-modal" onclick="if(event.target===this)fecharImpModal()">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="imp-modal-title">🧾 Lançar Imposto</div>
+      <button class="btn-modal-close" onclick="fecharImpModal()">✕</button>
+    </div>
+    <div style="padding:18px 22px">
+      <div class="form-group">
+        <label>Imposto / Obrigação <span style="color:var(--red)">*</span></label>
+        <select id="imp-nome" class="form-control" onchange="preencherAliquotaPadrao()">
+          <option value="">— Selecione —</option>
+          <option value="DAS - Simples Nacional">DAS — Simples Nacional</option>
+          <option value="ISS">ISS</option>
+          <option value="INSS">INSS</option>
+          <option value="FGTS">FGTS</option>
+          <option value="IRPJ/CSLL">IRPJ / CSLL</option>
+          <option value="PIS/COFINS">PIS / COFINS</option>
+          <option value="Outro">Outro…</option>
+        </select>
+      </div>
+      <div class="form-group" id="imp-nome-outro-grp" style="display:none">
+        <label>Nome do imposto <span style="color:var(--red)">*</span></label>
+        <input type="text" id="imp-nome-outro" class="form-control" placeholder="Ex: Contribuição Sindical">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin:0">
+          <label>Categoria</label>
+          <select id="imp-cat" class="form-control">
+            <option value="federal">Federal</option>
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+            <option value="trabalhista">Trabalhista</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Vencimento <span style="color:var(--red)">*</span></label>
+          <input type="date" id="imp-vencimento" class="form-control">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div class="form-group" style="margin:0">
+          <label>Alíquota %</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="imp-aliquota" class="form-control" min="0" max="100" step="0.01" placeholder="0,00" style="flex:1">
+            <button type="button" onclick="calcularImpostoAuto()" style="padding:9px 11px;background:rgba(91,110,245,.12);border:1px solid rgba(91,110,245,.35);border-radius:var(--radius-sm);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Calcular</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Valor Provisionado (R$) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="imp-provisionado" class="form-control" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Observações</label>
+        <input type="text" id="imp-obs" class="form-control" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharImpModal()">Cancelar</button>
+      <button class="btn" id="imp-save-btn" style="background:var(--yellow);color:#0c0e16;font-weight:700" onclick="salvarImposto()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BAIXA DE IMPOSTO -->
+<div class="modal-overlay" id="imp-baixa-modal" onclick="if(event.target===this)fecharImpBaixaModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">✅ Registrar Pagamento</div>
+      <button class="btn-modal-close" onclick="fecharImpBaixaModal()">✕</button>
+    </div>
+    <div style="padding:18px 22px">
+      <div id="imp-baixa-info" style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-dim)"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin:0">
+          <label>Data de Pagamento <span style="color:var(--red)">*</span></label>
+          <input type="date" id="imp-baixa-data" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Valor Pago (R$) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="imp-baixa-valor" class="form-control" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Conta / Banco de Origem</label>
+        <select id="imp-baixa-forma" class="form-control">
+          <option value="">— Selecione —</option>
+          <option value="Itaú">🟧 Itaú</option>
+          <option value="Nubank">🟪 Nubank</option>
+          <option value="Débito Automático">🔄 Débito Automático</option>
+          <option value="Cartão Corporativo">💳 Cartão Corporativo</option>
+          <option value="PIX">🔹 PIX</option>
+          <option value="Caixa Interno">💵 Caixa Interno</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel-modal" onclick="fecharImpBaixaModal()">Cancelar</button>
+      <button class="btn" id="imp-baixa-btn" style="background:var(--green);color:#06251a;font-weight:700" onclick="confirmarBaixaImposto()">✓ Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CAMADA MODULAR (core → services) ═══ -->
 <!-- html2canvas + jsPDF via jsdelivr (único CDN permitido pelo CSP do vercel.json) -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -1266,6 +1494,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 <script src="js/services/financeiroService.js"></script>
 <script src="js/services/comprasService.js"></script>
 <script src="js/services/auditService.js"></script>
+<script src="js/services/caixaService.js"></script>
 
 <script>
 /* db, TABLES → js/core/supabase.js  |  esc, brl, fmtDate, toast, num → js/core/utils.js
@@ -1326,7 +1555,8 @@ function variaveisDe(leadId){
 }
 
 async function carregar(){
-  if(!(await authGate())) return;        // bloqueia sem sessão (mostra login)
+  if(!(await authGateRole(['gestor','financeiro']))) return;
+  verificarAlertaCaixa();                // fire-and-forget — não bloqueia carregamento
   try{
     const[{data:leads,error:e1},{data:fat,error:e2},{data:movs,error:e3},{data:cats,error:e4},{data:compras,error:e5}]=await Promise.all([
       financeiroService.carregarPedidos(),
@@ -1945,7 +2175,7 @@ function fecharOsCard(){
 
 /* ═══ ALTERNÂNCIA DE VIEWS ═══ */
 function setView(view){
-  ['obras','gastos','variaveis','contas-pagar'].forEach(v=>{
+  ['obras','gastos','variaveis','contas-pagar','impostos'].forEach(v=>{
     const el=document.getElementById('view-'+v);
     if(el) el.style.display=(v===view)?'':'none';
     const tab=document.getElementById('tab-'+v);
@@ -1953,6 +2183,7 @@ function setView(view){
   });
   if(view==='variaveis'){ popularPedidoSelect(); renderVariaveis(); }
   if(view==='contas-pagar'){ renderCP(); }
+  if(view==='impostos'){ renderImpostos(); }
 }
 
 /* ═══ GASTOS FIXOS (dados via financeiroService) ═══ */
@@ -2778,6 +3009,35 @@ function renderVariaveis(){
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
 });
+async function verificarAlertaCaixa(){
+  try{
+    const[{data:cfg},{data:entradas},{data:saidas},{data:boletos},{data:fixos},{data:vars}]=await Promise.all([
+      caixaService.carregarConfig(),
+      caixaService.carregarEntradasPendentes(),
+      caixaService.carregarSaidasNativas(),
+      caixaService.carregarBoletosPendentes(),
+      caixaService.carregarGastosFixosPendentes(),
+      caixaService.carregarVariaveisPendentes()
+    ]);
+    const config=cfg||{saldo_inicial:0,peso_em_dia:100,peso_atraso_1_30:70,peso_atraso_31_60:40,peso_atraso_60plus:0};
+    const dias=caixaService.calcProjecaoDiaria({
+      config,entradasPendentes:entradas||[],saidasNativas:saidas||[],
+      boletosPendentes:boletos||[],gastosFixos:fixos||[],variaveisCP:vars||[]
+    });
+    const kpis=caixaService.calcKPIs(dias);
+    const badge=document.getElementById('alerta-caixa');
+    if(!badge)return;
+    if(kpis.primeiroNegativo&&kpis.primeiroNegativo.idx<=14){
+      badge.textContent=`⚠ D+${kpis.primeiroNegativo.idx}`;
+      badge.style.display='';
+    }else{
+      badge.style.display='none';
+    }
+  }catch(e){
+    console.warn('[AlertaCaixa]',e.message);
+  }
+}
+
 window.onload=()=>{testeFaturamento();carregar();};
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -3432,6 +3692,218 @@ function confirmarAlcadaOverlay(){
     _alcadaBypass=true;cb();
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * IMPOSTOS E OBRIGAÇÕES FISCAIS
+ * ═══════════════════════════════════════════════════════════════════════ */
+let _impostosCache = [];
+let _impostoEditId = null;
+let _impBaixaId    = null;
+
+const IMP_CATEGORIAS = {
+  federal:'Federal', estadual:'Estadual',
+  municipal:'Municipal', trabalhista:'Trabalhista'
+};
+const IMP_ALIQUOTAS_PADRAO = {
+  'DAS - Simples Nacional':6, 'ISS':3, 'INSS':11,
+  'FGTS':8, 'IRPJ/CSLL':4.8, 'PIS/COFINS':3.65
+};
+const IMP_CAT_PADRAO = {
+  'DAS - Simples Nacional':'federal','IRPJ/CSLL':'federal','PIS/COFINS':'federal',
+  'ISS':'municipal','INSS':'trabalhista','FGTS':'trabalhista'
+};
+
+async function renderImpostos(){
+  try{
+    const{data,error}=await financeiroService.carregarImpostos(mesAtual,anoAtual);
+    if(error) throw error;
+    _impostosCache=data||[];
+  }catch(e){ toast('Erro ao carregar impostos: '+e.message,'err'); _impostosCache=[]; }
+
+  const hoje=new Date().toISOString().slice(0,10);
+  const items=_impostosCache.map(i=>({
+    ...i, _atrasado:i.status!=='pago'&&i.data_vencimento&&i.data_vencimento<hoje
+  }));
+
+  const kProv  =Math.round(items.reduce((s,i)=>s+parseFloat(i.valor_provisionado||0),0));
+  const kPago  =Math.round(items.reduce((s,i)=>s+parseFloat(i.valor_pago||0),0));
+  const kApagar=Math.round(items.filter(i=>i.status!=='pago').reduce((s,i)=>s+parseFloat(i.valor_provisionado||0),0));
+  const kAtraso=Math.round(items.filter(i=>i._atrasado).reduce((s,i)=>s+parseFloat(i.valor_provisionado||0),0));
+
+  document.getElementById('imp-k-prov').textContent   =brl(kProv);
+  document.getElementById('imp-k-pago').textContent   =brl(kPago);
+  document.getElementById('imp-k-apagar').textContent =brl(kApagar);
+  document.getElementById('imp-k-atraso').textContent =brl(kAtraso);
+
+  if(!items.length){
+    document.getElementById('imp-table-wrap').innerHTML=
+      '<div class="empty-msg">Nenhum imposto lançado para '+MESES_NOME_FAT[mesAtual]+'/'+anoAtual+'.</div>';
+    return;
+  }
+
+  const rows=items.map(i=>{
+    const st   =i._atrasado?'atrasado':i.status;
+    const stLbl={pago:'✅ Pago',pendente:'⏳ Pendente',atrasado:'🔴 Atrasado'}[st]||st;
+    const venc =i.data_vencimento?new Date(i.data_vencimento+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    const prov =brl(Math.round(parseFloat(i.valor_provisionado||0)));
+    const pgVal=i.status==='pago'?brl(Math.round(parseFloat(i.valor_pago||0))):'—';
+    const catBadge=`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--bg-card2);color:var(--text-dim)">${IMP_CATEGORIAS[i.categoria]||i.categoria}</span>`;
+    const obsHtml=i.observacoes?`<br><span style="font-size:10px;color:var(--text-muted)">${esc(i.observacoes)}</span>`:'';
+    return `<tr>
+      <td><strong style="color:var(--text)">${esc(i.nome)}</strong>${obsHtml}</td>
+      <td>${catBadge}</td>
+      <td style="font-family:'DM Mono',monospace">${venc}</td>
+      <td style="font-family:'DM Mono',monospace">${prov}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green)">${pgVal}</td>
+      <td><span class="imp-status imp-status-${st}">${stLbl}</span></td>
+      <td style="white-space:nowrap">
+        ${i.status!=='pago'?`<button class="btn-detalhe" style="font-size:11px;padding:4px 8px;margin-right:4px" onclick="abrirBaixaImposto(${i.id})">✅ Baixar</button>`:''}
+        <button class="btn-lupa" onclick="editarImposto(${i.id})" title="Editar">✏️</button>
+        <button class="btn-lupa gestor-only" onclick="excluirImposto(${i.id})" title="Excluir" style="color:var(--red);border-color:rgba(240,81,106,.3);margin-left:3px">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('imp-table-wrap').innerHTML=`<table class="imp-table">
+    <thead><tr>
+      <th>Imposto / Obrigação</th><th>Categoria</th><th>Vencimento</th>
+      <th>Provisionado</th><th>Pago</th><th>Status</th><th>Ações</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function fecharImpModal(){ document.getElementById('imp-modal').classList.remove('open'); }
+function fecharImpBaixaModal(){ document.getElementById('imp-baixa-modal').classList.remove('open'); }
+
+function abrirImpostoModal(id=null){
+  _impostoEditId=id;
+  document.getElementById('imp-modal-title').textContent=id?'✏️ Editar Imposto':'🧾 Lançar Imposto';
+  if(id){
+    const i=_impostosCache.find(x=>x.id===id);
+    if(!i) return;
+    const stdNames=['DAS - Simples Nacional','ISS','INSS','FGTS','IRPJ/CSLL','PIS/COFINS'];
+    const isStd=stdNames.includes(i.nome);
+    document.getElementById('imp-nome').value             =isStd?i.nome:'Outro';
+    document.getElementById('imp-nome-outro').value       =isStd?'':i.nome;
+    document.getElementById('imp-nome-outro-grp').style.display=isStd?'none':'';
+    document.getElementById('imp-cat').value              =i.categoria||'federal';
+    document.getElementById('imp-vencimento').value       =i.data_vencimento||'';
+    document.getElementById('imp-aliquota').value         =i.aliquota_pct||'';
+    document.getElementById('imp-provisionado').value     =parseFloat(i.valor_provisionado||0).toFixed(2);
+    document.getElementById('imp-obs').value              =i.observacoes||'';
+  }else{
+    ['imp-nome','imp-nome-outro','imp-vencimento','imp-aliquota','imp-provisionado','imp-obs'].forEach(id2=>{
+      document.getElementById(id2).value='';
+    });
+    document.getElementById('imp-nome-outro-grp').style.display='none';
+    document.getElementById('imp-cat').value='federal';
+  }
+  document.getElementById('imp-modal').classList.add('open');
+}
+
+function editarImposto(id){ abrirImpostoModal(id); }
+
+function preencherAliquotaPadrao(){
+  const nome=document.getElementById('imp-nome').value;
+  document.getElementById('imp-nome-outro-grp').style.display=(nome==='Outro')?'':'none';
+  if(IMP_ALIQUOTAS_PADRAO[nome]) document.getElementById('imp-aliquota').value=IMP_ALIQUOTAS_PADRAO[nome];
+  if(IMP_CAT_PADRAO[nome]) document.getElementById('imp-cat').value=IMP_CAT_PADRAO[nome];
+}
+
+function calcularImpostoAuto(){
+  const aliq=parseFloat(document.getElementById('imp-aliquota').value||0);
+  const fatMes=allPedidos.reduce((s,p)=>s+parseFloat(p.valor||0),0);
+  const val=financeiroService.calcularImpostoAutomatico(fatMes,aliq);
+  document.getElementById('imp-provisionado').value=val.toFixed(2);
+}
+
+async function salvarImposto(){
+  const nomeSelect=document.getElementById('imp-nome').value;
+  const nome=nomeSelect==='Outro'
+    ?(document.getElementById('imp-nome-outro').value||'').trim()
+    :nomeSelect;
+  if(!nome){ toast('Informe o nome do imposto.','warn'); return; }
+  const vencimento=document.getElementById('imp-vencimento').value;
+  if(!vencimento){ toast('Informe a data de vencimento.','warn'); return; }
+  const provisionado=parseFloat(document.getElementById('imp-provisionado').value||0);
+  if(provisionado<=0){ toast('Informe o valor provisionado.','warn'); return; }
+
+  const dados={
+    nome, categoria:document.getElementById('imp-cat').value,
+    competencia_mes:mesAtual, competencia_ano:anoAtual,
+    data_vencimento:vencimento,
+    aliquota_pct:parseFloat(document.getElementById('imp-aliquota').value||0)||null,
+    valor_provisionado:provisionado,
+    observacoes:document.getElementById('imp-obs').value.trim()||null,
+    status:'pendente',
+    user_id:_authSession?.user?.id
+  };
+
+  const btn=document.getElementById('imp-save-btn');
+  btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    let err;
+    if(_impostoEditId){
+      const st=_impostosCache.find(x=>x.id===_impostoEditId)?.status||'pendente';
+      const{error}=await financeiroService.atualizarImposto(_impostoEditId,{...dados,status:st});
+      err=error;
+    }else{
+      const{error}=await financeiroService.inserirImposto(dados);
+      err=error;
+    }
+    if(err) throw err;
+    toast(_impostoEditId?'Imposto atualizado!':'Imposto lançado!','ok');
+    fecharImpModal();
+    renderImpostos();
+  }catch(e){ toast('Erro ao salvar: '+e.message,'err'); }
+  finally{ btn.disabled=false; btn.textContent='💾 Salvar'; }
+}
+
+function abrirBaixaImposto(id){
+  _impBaixaId=id;
+  const i=_impostosCache.find(x=>x.id===id);
+  if(!i) return;
+  document.getElementById('imp-baixa-info').innerHTML=
+    `<strong>${esc(i.nome)}</strong> &mdash; Provisionado: <span style="font-family:'DM Mono',monospace;color:var(--yellow)">${brl(Math.round(parseFloat(i.valor_provisionado||0)))}</span>`;
+  document.getElementById('imp-baixa-data').value  =new Date().toISOString().slice(0,10);
+  document.getElementById('imp-baixa-valor').value =parseFloat(i.valor_provisionado||0).toFixed(2);
+  document.getElementById('imp-baixa-forma').value ='';
+  document.getElementById('imp-baixa-modal').classList.add('open');
+}
+
+async function confirmarBaixaImposto(){
+  const data_pagamento=document.getElementById('imp-baixa-data').value;
+  if(!data_pagamento){ toast('Informe a data de pagamento.','warn'); return; }
+  const valor_pago=parseFloat(document.getElementById('imp-baixa-valor').value||0);
+  if(valor_pago<=0){ toast('Informe o valor pago.','warn'); return; }
+  const forma=document.getElementById('imp-baixa-forma').value;
+
+  const btn=document.getElementById('imp-baixa-btn');
+  btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    const{error}=await financeiroService.atualizarImposto(_impBaixaId,{
+      status:'pago', data_pagamento, valor_pago, forma_pagamento:forma||null
+    });
+    if(error) throw error;
+    toast('Pagamento registrado!','ok');
+    fecharImpBaixaModal();
+    renderImpostos();
+  }catch(e){ toast('Erro: '+e.message,'err'); }
+  finally{ btn.disabled=false; btn.textContent='✓ Confirmar Pagamento'; }
+}
+
+async function excluirImposto(id){
+  const i=_impostosCache.find(x=>x.id===id);
+  if(!i||!confirm('Excluir "'+i.nome+'"?\nEsta ação não pode ser desfeita.')) return;
+  try{
+    const{error}=await financeiroService.deletarImposto(id);
+    if(error) throw error;
+    toast('Imposto excluído.','ok');
+    renderImpostos();
+  }catch(e){ toast('Erro ao excluir: '+e.message,'err'); }
+}
+
 </script>
 <script src="js/modules/ficha-pdf.js"></script>
 
@@ -3496,5 +3968,6 @@ function confirmarAlcadaOverlay(){
   </div>
 </div>
 
+</div>
 </body>
 </html>
