@@ -19,8 +19,12 @@ const crmService = {
   },
   inserirLead(lead){ return db.from(TABLES.LEADS).insert([lead]); },
   atualizarLead(id, dados){ return db.from(TABLES.LEADS).update(dados).eq('id', id); },
-  deletarLead(id){ return db.from(TABLES.LEADS).update({arquivado:true}).eq('id', id); },
-  arquivarLead(id){ return db.from(TABLES.LEADS).update({arquivado:true}).eq('id', id); },
+  /* Arquivar (soft-delete) roda via RPC SECURITY DEFINER: o UPDATE direto
+     esbarra na policy de SELECT (arquivado=false) ao tornar a linha invisível.
+     Ver migrations/2026-07-01_fix_arquivar_lead_rpc.sql */
+  deletarLead(id){ return db.rpc('arquivar_lead', { p_id: id }); },
+  arquivarLead(id){ return db.rpc('arquivar_lead', { p_id: id }); },
+  desarquivarLead(id){ return db.rpc('desarquivar_lead', { p_id: id }); },
   resetarLeads(confirmacao){
     if(confirmacao !== 'CONFIRMAR_RESET_TOTAL'){
       console.error('resetarLeads: confirmação obrigatória não fornecida');
